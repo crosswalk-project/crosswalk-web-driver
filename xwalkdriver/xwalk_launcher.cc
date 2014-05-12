@@ -171,15 +171,18 @@ Status LaunchDesktopXwalk(
 
 #if defined(OS_POSIX)
   base::FileHandleMappingVector no_stderr;
-  int devnull = -1;
-  file_util::ScopedFD scoped_devnull(&devnull);
+  base::ScopedFD devnull;
+  //int devnull = -1;
+  //base::ScopedFD scoped_devnull(&devnull);
   if (!CommandLine::ForCurrentProcess()->HasSwitch("verbose")) {
     // Redirect stderr to /dev/null, so that Xwalk log spew doesn't confuse
     // users.
-    devnull = open("/dev/null", O_WRONLY);
-    if (devnull == -1)
+    //devnull = open("/dev/null", O_WRONLY);
+    devnull.reset(HANDLE_EINTR(open("/dev/null", O_WRONLY)));
+    //if (devnull == -1)
+    if (!devnull.is_valid())
       return Status(kUnknownError, "couldn't open /dev/null");
-    no_stderr.push_back(std::make_pair(devnull, STDERR_FILENO));
+    no_stderr.push_back(std::make_pair(devnull.get(), STDERR_FILENO));
     options.fds_to_remap = &no_stderr;
   }
 #endif

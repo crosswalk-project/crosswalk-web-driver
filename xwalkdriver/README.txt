@@ -1,7 +1,7 @@
 This file contains high-level info about how XwalkDriver works.
 
 XwalkDriver is an implementation of the WebDriver standard. Part of code is
-ported from XwalkDriver.
+ported from ChromeDriver.
 
 =====How To=====
 For Linux xwalk:

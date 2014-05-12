@@ -27,7 +27,7 @@
         '../content/content.gyp:content_common',
         '../content/content_shell_and_tests.gyp:test_support_content',
         '../testing/gtest.gyp:gtest',
-        '../ui/ui.gyp:ui',
+        '../ui/base/ui_base.gyp:ui_base',
         'test/base/base.gyp:xwalk_test_base',
         'xwalk_application_lib',
         'xwalk_runtime',
@@ -42,6 +42,8 @@
         'application/common/manifest_handlers/csp_handler_unittest.cc',
         'application/common/manifest_handlers/main_document_handler_unittest.cc',
         'application/common/manifest_handlers/permissions_handler_unittest.cc',
+        'application/common/manifest_handlers/warp_handler_unittest.cc',
+        'application/common/manifest_handlers/widget_handler_unittest.cc',
         'application/common/manifest_handler_unittest.cc',
         'application/common/manifest_unittest.cc',
         'runtime/common/xwalk_content_client_unittest.cc',
@@ -54,6 +56,11 @@
           ],
           'dependencies': [
             '../skia/skia.gyp:skia',
+          ],
+        }],
+        ['tizen==1', {
+          'sources': [
+            'application/common/manifest_handlers/navigation_handler_unittest.cc',
           ],
         }],
       ],
@@ -70,7 +77,7 @@
         '../third_party/zlib/zlib.gyp:zlib',
         '../ui/events/events.gyp:events',
         '../ui/gfx/gfx.gyp:gfx',
-        '../ui/ui.gyp:ui',
+        '../ui/base/ui_base.gyp:ui_base',
         '../url/url.gyp:url_lib',
       ],
       'include_dirs': [
@@ -237,7 +244,7 @@
         '../net/net.gyp:net',
         '../ui/events/events.gyp:events',
         '../ui/gfx/gfx.gyp:gfx',
-        '../ui/ui.gyp:ui',
+        '../ui/base/ui_base.gyp:ui_base',
       ],
       'include_dirs': [
         '..',
@@ -333,7 +340,7 @@
         '../testing/gtest.gyp:gtest',
         '../ui/events/events.gyp:events',
         '../ui/gfx/gfx.gyp:gfx',
-        '../ui/ui.gyp:ui',
+        '../ui/base/ui_base.gyp:ui_base',
       ],
       'include_dirs': [
         '..,'
@@ -380,8 +387,8 @@
         '../skia/skia.gyp:skia',
         '../testing/gmock.gyp:gmock',
         '../testing/gtest.gyp:gtest',
-        '../ui/ui.gyp:ui',
         '../third_party/libxml/libxml.gyp:libxml',
+        '../ui/base/ui_base.gyp:ui_base',
         'test/base/base.gyp:xwalk_test_base',
         'xwalk_application_lib',
         'xwalk_resources',
