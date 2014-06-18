@@ -300,34 +300,63 @@ Status LaunchAndroidXwalk(
   return Status(kOk);
 }
 
-// This version of xwalkdriver can not launch remote Tizen IVI xwalk automatic.
 // You can launch xwalk manually in Tizen IVI with remote debug option.
 // Then use the capabilities 'tizenDebuggerAddress' in the form of
 // <hostname/ip:port>, e.g. '10.238.158.1:38947'
 
 Status LaunchTizenXwalk(
     URLRequestContextGetter* context_getter,
-    int port,
+    int local_port,
     scoped_ptr<PortReservation> port_reservation,
     const SyncWebSocketFactory& socket_factory,
     const Capabilities& capabilities,
     ScopedVector<DevToolsEventListener>& devtools_event_listeners,
+    DeviceManager* device_manager,
     scoped_ptr<Xwalk>* xwalk) {
-  scoped_ptr<TizenDevice> device;
   Status status(kOk);
-  scoped_ptr<DevToolsHttpClient> devtools_client;
-  status = WaitForDevToolsAndCheckVersion(
-      capabilities.tizen_debugger_address, context_getter, socket_factory,
-      &devtools_client);
-  if (status.IsError()) {
-    return Status(kUnknownError, "cannot connect to xwalk at " +
-                      capabilities.tizen_debugger_address.ToString(),
-                  status);
+  scoped_ptr<Device> device;
+  if (capabilities.tizen_device_serial.empty()) {
+    status = device_manager->AcquireDevice(&device);
+  } else {
+    status = device_manager->AcquireSpecificDevice(
+        capabilities.tizen_device_serial, &device);
   }
+
+  if(status.IsError()) {
+    printf("AcquireDevice error! \n");
+    return status;
+  }
+  int remote_port = capabilities.tizen_debugger_address.port();
+  status = device->SetUpTizenApp(capabilities.tizen_app_id,
+                                 local_port,
+                                 remote_port);
+
+  scoped_ptr<DevToolsHttpClient> devtools_client;
+
+  if (capabilities.tizen_use_running_app) {
+    status = WaitForDevToolsAndCheckVersion(
+        capabilities.tizen_debugger_address, context_getter, socket_factory,
+        &devtools_client);
+    if (status.IsError()) {
+      return Status(kUnknownError, "cannot connect to xwalk at " +
+                        capabilities.tizen_debugger_address.ToString(),
+                    status);
+    }
+  } else {
+    status = WaitForDevToolsAndCheckVersion(NetAddress(local_port),
+                                            context_getter,
+                                            socket_factory,
+                                            &devtools_client);
+    if (status.IsError()) {
+      device->TearDownTizenApp();
+      return status;
+    }
+  }
+
   xwalk->reset(new XwalkTizenImpl(devtools_client.Pass(),
-                                       devtools_event_listeners,
-                                       port_reservation.Pass(),
-                                       device.Pass()));
+                                  devtools_event_listeners,
+                                  port_reservation.Pass(),
+                                  device.Pass()));
   return Status(kOk);
 }
 
@@ -374,6 +403,7 @@ Status LaunchXwalk(
                              socket_factory,
                              capabilities,
                              devtools_event_listeners,
+                             device_manager,
                              xwalk);
   } else {
     return LaunchDesktopXwalk(context_getter,

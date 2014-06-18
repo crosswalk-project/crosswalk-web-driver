@@ -130,13 +130,13 @@ Status InitSessionHelper(
     return status;
 
   status = LaunchXwalk(bound_params.context_getter.get(),
-                        bound_params.socket_factory,
-                        bound_params.device_manager,
-                        bound_params.port_server,
-                        bound_params.port_manager,
-                        capabilities,
-                        devtools_event_listeners,
-                        &session->xwalk);
+                       bound_params.socket_factory,
+                       bound_params.device_manager,
+                       bound_params.port_server,
+                       bound_params.port_manager,
+                       capabilities,
+                       devtools_event_listeners,
+                       &session->xwalk);
   if (status.IsError())
     return status;
 

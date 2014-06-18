@@ -89,7 +89,7 @@ Status AdbImpl::GetDevices(std::vector<std::string>* devices) {
   while (lines.GetNext()) {
     std::vector<std::string> fields;
     base::SplitStringAlongWhitespace(lines.token(), &fields);
-    if (fields.size() == 2 && fields[1] == "device") {
+    if ((fields.size() == 3 || fields.size() == 2) && fields[1] == "device") {
       devices->push_back(fields[0]);
     }
   }
@@ -111,6 +111,22 @@ Status AdbImpl::ForwardPort(
     return Status(kOk);
   return Status(kUnknownError, "Failed to forward ports to device " +
                 device_serial + ": " + response);
+}
+
+Status AdbImpl::ForwardTizenPort(
+    const std::string& device_serial, int local_port,
+    int remote_port) {
+  std::string response;
+  Status status = ExecuteHostCommand(
+      device_serial,
+      "forward:tcp:" + base::IntToString(local_port) + ";tcp:" +
+      base::IntToString(remote_port),
+      &response);
+  if (!status.IsOk())
+    return status;
+  if (response == "OKAY")
+    return Status(kOk);
+  return Status(kUnknownError, response);
 }
 
 Status AdbImpl::SetCommandLineFile(const std::string& device_serial,
@@ -143,6 +159,23 @@ Status AdbImpl::CheckAppInstalled(
     return status;
   if (response.find("package") == std::string::npos)
     return Status(kUnknownError, package + " is not installed on device " +
+                  device_serial);
+  return Status(kOk);
+}
+
+Status AdbImpl::CheckTizenAppInstalled(
+    const std::string& device_serial, const std::string& app_id) {
+  std::string response;
+  std::string command = "su - app -c "\
+                        "\"export XDG_RUNTIME_DIR=\"/run/user/5000\";"\
+                        "export DBUS_SESSION_BUS_ADDRESS=unix:"\
+                        "path=/run/user/5000/dbus/user_bus_socket; "\
+                        "xwalkctl\"";
+  Status status = ExecuteHostShellCommand(device_serial, command, &response);
+  if (!status.IsOk())
+    return status;
+  if (response.find(app_id) == std::string::npos)
+    return Status(kUnknownError, app_id + " is not installed on device " +
                   device_serial);
   return Status(kOk);
 }
@@ -184,11 +217,70 @@ Status AdbImpl::Launch(
   return Status(kOk);
 }
 
+
+Status AdbImpl::LaunchTizenApp(
+    const std::string& device_serial,
+    const std::string& app_id) {
+  std::string response;
+  std::string shell_command = "su - app -c \" "\
+                              "export XDG_RUNTIME_DIR=\"/run/user/5000\"; "\
+                              "export DBUS_SESSION_BUS_ADDRESS=unix:"\
+                              "path=/run/user/5000/dbus/user_bus_socket; "\
+                              "xwalkctl; xwalk-launcher " + app_id + "\"";
+
+  Status status = ExecuteHostShellCommand(device_serial,
+                                          shell_command,
+                                          &response);
+  //xwalk-laucher no responce
+  //if (!status.IsOk())
+  //  return status;
+  if (response.find("Error") != std::string::npos)
+    printf("Launch failed %s \n", response.c_str());
+  return Status(kOk);
+}
+
 Status AdbImpl::ForceStop(
     const std::string& device_serial, const std::string& package) {
   std::string response;
   return ExecuteHostShellCommand(
       device_serial, "am force-stop " + package, &response);
+}
+
+Status AdbImpl::ForceStopTizenApp(
+    const std::string& device_serial, const std::string& app_id) {
+
+  std::string pid = GetPidByTizenAppId(device_serial, app_id);
+  if (pid.empty())
+    return Status(kUnknownError);;
+
+  std::string response;
+  return  ExecuteHostShellCommand(
+      device_serial,
+      "kill -9 " + pid,
+      &response);
+}
+
+std::string AdbImpl::GetPidByTizenAppId(const std::string& device_serial,
+                             const std::string& app_id) {
+  std::string response;
+  Status status = ExecuteHostShellCommand(device_serial, "ps auxww", &response);
+  if (!status.IsOk())
+    return std::string();
+
+  std::vector<std::string> lines;
+  base::SplitString(response, '\n', &lines);
+  for (size_t i = 0; i < lines.size(); ++i) {
+    std::string line = lines[i];
+    if (line.empty())
+      continue;
+    std::vector<std::string> tokens;
+    base::SplitStringAlongWhitespace(line, &tokens);
+    if (tokens.size() != 12)
+      continue;
+    if (tokens[11].compare(app_id) == 0)
+      return tokens[1];
+  }
+  return std::string();
 }
 
 Status AdbImpl::GetPidByName(const std::string& device_serial,
@@ -229,8 +321,11 @@ Status AdbImpl::ExecuteCommand(
   io_task_runner_->PostTask(
       FROM_HERE,
       base::Bind(&ExecuteCommandOnIOThread, command, response_buffer, port_));
+  int delta_time = 30;
+  if (command.find("xwalk-launcher") != std::string::npos)
+    delta_time = 3;
   Status status = response_buffer->GetResponse(
-      response, base::TimeDelta::FromSeconds(30));
+      response, base::TimeDelta::FromSeconds(delta_time));
   if (status.IsOk()) {
     VLOG(1) << "Received adb response: " << *response;
   }

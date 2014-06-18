@@ -28,6 +28,24 @@ Device::~Device() {
   release_callback_.Run();
 }
 
+Status Device::SetUpTizenApp(const std::string& app_id,
+                             int local_port,
+                             int remote_port) {
+  Status status = Status(kOk);
+  if (!active_tizen_app_.empty())
+    return Status(kUnknownError,
+        active_tizen_app_ + " was launched and has not been quit");
+
+  status = adb_->CheckTizenAppInstalled(serial_, app_id);
+  if (status.IsError())
+    return status;
+
+  status = adb_->LaunchTizenApp(serial_, app_id);
+  active_tizen_app_ = app_id;
+  status = adb_->ForwardTizenPort(serial_, local_port, remote_port);
+  return status;
+}
+
 Status Device::SetUp(const std::string& package,
                      const std::string& activity,
                      const std::string& process,
@@ -109,6 +127,18 @@ Status Device::TearDown() {
     if (status.IsError())
       return status;
     active_package_ = "";
+  }
+  return Status(kOk);
+}
+
+
+Status Device::TearDownTizenApp() {
+  if (!active_tizen_app_.empty()) {
+    std::string response;
+    Status status = adb_->ForceStopTizenApp(serial_, active_tizen_app_);
+    if (status.IsError())
+      return status;
+    active_tizen_app_ = "";
   }
   return Status(kOk);
 }

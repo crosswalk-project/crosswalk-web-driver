@@ -49,6 +49,17 @@ class AdbImpl : public Adb {
                               const std::string& process_name,
                               int* pid) OVERRIDE;
 
+  virtual Status ForwardTizenPort(const std::string& device_serial,
+                                  int local_port,
+                                  int remote_port) OVERRIDE;
+  virtual Status LaunchTizenApp(const std::string& device_serial,
+                                const std::string& app_id) OVERRIDE;
+  virtual Status ForceStopTizenApp(const std::string& device_serial,
+                                   const std::string& app_id) OVERRIDE;
+  virtual Status CheckTizenAppInstalled(const std::string& device_serial,
+                                        const std::string& app_id) OVERRIDE;
+  virtual std::string GetPidByTizenAppId(const std::string& device_serial,
+                                         const std::string& app_id) OVERRIDE;
  private:
   Status ExecuteCommand(const std::string& command,
                         std::string* response);

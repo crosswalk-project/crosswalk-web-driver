@@ -34,6 +34,19 @@ class Adb {
   virtual Status GetPidByName(const std::string& device_serial,
                               const std::string& process_name,
                               int* pid) = 0;
+
+  virtual Status ForwardTizenPort(const std::string& device_serial,
+                                  int local_port,
+                                  int remote_port) = 0;
+  virtual Status LaunchTizenApp(const std::string& device_serial,
+                                const std::string& app_id) = 0;
+  virtual Status ForceStopTizenApp(const std::string& device_serial,
+                                   const std::string& app_id) = 0;
+  virtual Status CheckTizenAppInstalled(const std::string& device_serial,
+                                        const std::string& app_id) = 0;
+  virtual std::string GetPidByTizenAppId(const std::string& device_serial,
+                                         const std::string& app_id) = 0;
+
 };
 
 #endif  // XWALK_TEST_XWALKDRIVER_XWALK_ADB_H_

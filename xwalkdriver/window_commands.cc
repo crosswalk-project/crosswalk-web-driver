@@ -738,8 +738,12 @@ Status ExecuteScreenshot(
   if (status.IsError())
     return status;
 
-  // TODO(Peter Wang): need to implement xwalk extension to support it.
+  std::string screenshot;
+  status = web_view->CaptureScreenshot(&screenshot);
+  if (status.IsError())
+    return status;
 
+  value->reset(new base::StringValue(screenshot));
   return Status(kOk);
 }
 

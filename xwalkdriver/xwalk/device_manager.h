@@ -28,8 +28,12 @@ class Device {
                const std::string& args,
                bool use_running_app,
                int port);
+  Status SetUpTizenApp(const std::string& app_id,
+                       int local_port,
+                       int remote_port);
 
   Status TearDown();
+  Status TearDownTizenApp();
 
  private:
   friend class DeviceManager;
@@ -45,6 +49,7 @@ class Device {
 
   const std::string serial_;
   std::string active_package_;
+  std::string active_tizen_app_;
   Adb* adb_;
   base::Callback<void()> release_callback_;
 

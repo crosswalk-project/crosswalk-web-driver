@@ -24,6 +24,7 @@ struct Session;
 class Status;
 class URLRequestContextGetter;
 
+
 struct InitSessionParams {
   InitSessionParams(scoped_refptr<URLRequestContextGetter> context_getter,
                     const SyncWebSocketFactory& socket_factory,

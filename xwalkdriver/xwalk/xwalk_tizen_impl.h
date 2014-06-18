@@ -12,7 +12,7 @@
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_impl.h"
 
 class DevToolsHttpClient;
-
+class Device;
 class TizenDevice {
  public:
   TizenDevice() {}
@@ -25,7 +25,8 @@ class XwalkTizenImpl : public XwalkImpl {
       scoped_ptr<DevToolsHttpClient> client,
       ScopedVector<DevToolsEventListener>& devtools_event_listeners,
       scoped_ptr<PortReservation> port_reservation,
-      scoped_ptr<TizenDevice> device);
+      //scoped_ptr<TizenDevice> device);
+      scoped_ptr<Device> device);
   virtual ~XwalkTizenImpl();
 
   // Overridden from Xwalk
@@ -35,7 +36,7 @@ class XwalkTizenImpl : public XwalkImpl {
   virtual Status QuitImpl() OVERRIDE;
 
  private:
-  scoped_ptr<TizenDevice> device_;
+  scoped_ptr<Device> device_;
 };
 
 #endif  // XWALK_TEST_XWALKDRIVER_XWALK_XWALK_TIZEN_IMPL_H_

@@ -92,6 +92,8 @@ struct Capabilities {
 
   std::string tizen_device_serial;
 
+  bool tizen_use_running_app;
+
   base::FilePath binary;
 
   // If provided, the remote debugging address to connect to.

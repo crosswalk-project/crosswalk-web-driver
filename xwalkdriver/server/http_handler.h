@@ -66,6 +66,7 @@ class HttpHandler {
               const scoped_refptr<base::SingleThreadTaskRunner> io_task_runner,
               const std::string& url_base,
               int adb_port,
+              int sdb_port,
               scoped_ptr<PortServer> port_server);
   ~HttpHandler();
 

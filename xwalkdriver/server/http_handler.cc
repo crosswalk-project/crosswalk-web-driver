@@ -18,6 +18,7 @@
 #include "base/sys_info.h"
 #include "base/values.h"
 #include "xwalk/test/xwalkdriver/alert_commands.h"
+#include "xwalk/test/xwalkdriver/capabilities.h"
 #include "xwalk/test/xwalkdriver/xwalk/adb_impl.h"
 #include "xwalk/test/xwalkdriver/xwalk/device_manager.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
@@ -67,6 +68,7 @@ HttpHandler::HttpHandler(
     const scoped_refptr<base::SingleThreadTaskRunner> io_task_runner,
     const std::string& url_base,
     int adb_port,
+    int sdb_port,
     scoped_ptr<PortServer> port_server)
     : quit_func_(quit_func),
       url_base_(url_base),
@@ -77,7 +79,13 @@ HttpHandler::HttpHandler(
 #endif
   context_getter_ = new URLRequestContextGetter(io_task_runner);
   socket_factory_ = CreateSyncWebSocketFactory(context_getter_.get());
-  adb_.reset(new AdbImpl(io_task_runner, adb_port));
+
+  if (adb_port) {
+    adb_.reset(new AdbImpl(io_task_runner, adb_port));
+  } else if (sdb_port) {
+    adb_.reset(new AdbImpl(io_task_runner, sdb_port));
+  }
+
   device_manager_.reset(new DeviceManager(adb_.get()));
   port_server_ = port_server.Pass();
   port_manager_.reset(new PortManager(12000, 13000));

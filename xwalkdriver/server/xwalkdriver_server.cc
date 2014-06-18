@@ -138,6 +138,7 @@ void StartServerOnIOThread(int port,
 void RunServer(int port,
                const std::string& url_base,
                int adb_port,
+               int sdb_port,
                scoped_ptr<PortServer> port_server) {
   base::Thread io_thread("XwalkDriver IO");
   CHECK(io_thread.StartWithOptions(
@@ -149,6 +150,7 @@ void RunServer(int port,
                       io_thread.message_loop_proxy(),
                       url_base,
                       adb_port,
+                      sdb_port,
                       port_server.Pass());
   HttpRequestHandlerFunc handle_request_func =
       base::Bind(&HandleRequestOnCmdThread, &handler);
@@ -181,6 +183,7 @@ int main(int argc, char *argv[]) {
   // Parse command line flags.
   int port = 9515;
   int adb_port = 5037;
+  int sdb_port = 26099;
   std::string url_base;
   scoped_ptr<PortServer> port_server;
   if (cmd_line->HasSwitch("h") || cmd_line->HasSwitch("help")) {
@@ -188,6 +191,7 @@ int main(int argc, char *argv[]) {
     const char* kOptionAndDescriptions[] = {
         "port=PORT", "port to listen on",
         "adb-port=PORT", "adb server port",
+        "sdb-port=PORT", "sdb server port, e.g -sdb-port=26099",
         "log-path=FILE", "write server log to file instead of stderr, "
             "increases log level to INFO",
         "verbose", "log verbosely",
@@ -214,6 +218,16 @@ int main(int argc, char *argv[]) {
                            &adb_port)) {
       printf("Invalid adb-port. Exiting...\n");
       return 1;
+    }
+  }
+
+  if (cmd_line->HasSwitch("sdb-port")) {
+    if (!base::StringToInt(cmd_line->GetSwitchValueASCII("sdb-port"),
+                           &sdb_port)) {
+      printf("Invalid sdb-port. Exiting...\n");
+      return 1;
+    } else {
+      adb_port = 0;
     }
   }
   if (cmd_line->HasSwitch("port-server")) {
@@ -248,6 +262,6 @@ int main(int argc, char *argv[]) {
     printf("Unable to initialize logging. Exiting...\n");
     return 1;
   }
-  RunServer(port, url_base, adb_port, port_server.Pass());
+  RunServer(port, url_base, adb_port, sdb_port, port_server.Pass());
   return 0;
 }
