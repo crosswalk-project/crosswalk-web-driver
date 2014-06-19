@@ -105,7 +105,7 @@ Status DevToolsHttpClient::Init(const base::TimeDelta& timeout) {
     build_no_ = kToTBuildNo;
     return Status(kOk);
   }
-  std::string prefix = "Xwalk/";
+  std::string prefix = "Chrome/";
   if (devtools_version.find(prefix) != 0u) {
     return Status(kUnknownError,
                   "unrecognized Xwalk version: " + devtools_version);
