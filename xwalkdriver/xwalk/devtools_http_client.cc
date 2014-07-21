@@ -105,10 +105,11 @@ Status DevToolsHttpClient::Init(const base::TimeDelta& timeout) {
     build_no_ = kToTBuildNo;
     return Status(kOk);
   }
+
   std::string prefix = "Chrome/";
   if (devtools_version.find(prefix) != 0u) {
     return Status(kUnknownError,
-                  "unrecognized Xwalk version: " + devtools_version);
+                  "unrecognized Crosswalk version: " + devtools_version);
   }
 
   std::string stripped_version = devtools_version.substr(prefix.length());
@@ -118,7 +119,7 @@ Status DevToolsHttpClient::Init(const base::TimeDelta& timeout) {
   if (version_parts.size() != 4 ||
       !base::StringToInt(version_parts[2], &temp_build_no)) {
     return Status(kUnknownError,
-                  "unrecognized Xwalk version: " + devtools_version);
+                  "unrecognized Crosswalk version: " + devtools_version);
   }
 
   version_ = stripped_version;
