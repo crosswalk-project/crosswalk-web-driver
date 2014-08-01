@@ -163,7 +163,12 @@ Status DeviceManager::AcquireDevice(scoped_ptr<Device>* device) {
                   base::IntToString(devices.size()) + " online)");
   std::vector<std::string>::iterator iter;
   for (iter = devices.begin(); iter != devices.end(); iter++) {
-    if (!IsDeviceLocked(*iter)) {
+    if (IsDeviceLocked(*iter)) {
+      active_devices_.remove(*iter);
+      device->reset(LockDevice(*iter));
+      status = Status(kOk);
+      break;
+    } else {
       device->reset(LockDevice(*iter));
       status = Status(kOk);
       break;
