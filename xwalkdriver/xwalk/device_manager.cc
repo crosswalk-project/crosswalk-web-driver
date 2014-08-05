@@ -115,6 +115,7 @@ Status Device::ForwardDevtoolsPort(const std::string& package,
       return status;
     }
     device_socket = base::StringPrintf("%s_devtools_remote", package.c_str());
+    printf("Device socket is: %s \n", device_socket.c_str());
   }
 
   return adb_->ForwardPort(serial_, port, device_socket);

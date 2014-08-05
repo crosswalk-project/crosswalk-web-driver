@@ -735,9 +735,11 @@ Status ExecuteScreenshot(
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value) {
   Status status = session->xwalk->ActivateWebView(web_view->GetId());
-  if (status.IsError())
-    return status;
-
+  if (status.IsError()){
+    //return status;
+    printf("The Crosswalk WebView Activate Status is \"%s\"\n",
+                                           status.message().c_str());
+  }
   std::string screenshot;
   status = web_view->CaptureScreenshot(&screenshot);
   if (status.IsError())

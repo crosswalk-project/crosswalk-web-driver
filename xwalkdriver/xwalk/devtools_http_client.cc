@@ -81,6 +81,7 @@ DevToolsHttpClient::~DevToolsHttpClient() {}
 Status DevToolsHttpClient::Init(const base::TimeDelta& timeout) {
   base::TimeTicks deadline = base::TimeTicks::Now() + timeout;
   std::string devtools_version;
+  printf("DevTools server address is %s \n", server_url_.c_str());
   while (true) {
     Status status = GetVersion(&devtools_version);
     if (status.IsOk())
