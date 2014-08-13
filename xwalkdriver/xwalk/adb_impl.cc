@@ -275,9 +275,9 @@ std::string AdbImpl::GetPidByTizenAppId(const std::string& device_serial,
       continue;
     std::vector<std::string> tokens;
     base::SplitStringAlongWhitespace(line, &tokens);
-    if (tokens.size() != 12)
+    if (tokens.size() != 11)
       continue;
-    if (tokens[11].compare(app_id) == 0)
+    if (tokens[10].find(app_id) != std::string::npos)
       return tokens[1];
   }
   return std::string();
@@ -321,6 +321,8 @@ Status AdbImpl::ExecuteCommand(
   io_task_runner_->PostTask(
       FROM_HERE,
       base::Bind(&ExecuteCommandOnIOThread, command, response_buffer, port_));
+  if (command.find("ps auxww") != std::string::npos)
+    sleep(1);
   int delta_time = 30;
   if (command.find("xwalk-launcher") != std::string::npos)
     delta_time = 3;
