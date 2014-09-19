@@ -97,6 +97,7 @@ Status WaitForDevToolsAndCheckVersion(
   base::TimeTicks deadline =
       base::TimeTicks::Now() + base::TimeDelta::FromSeconds(20);
   Status status = client->Init(deadline - base::TimeTicks::Now());
+  printf(">>>> WaitForDevToolsAndCheckVersion status %s \n", status.message().c_str());
   if (status.IsError())
     return status;
   if (client->build_no() < kMinimumSupportedXwalkBuildNo) {

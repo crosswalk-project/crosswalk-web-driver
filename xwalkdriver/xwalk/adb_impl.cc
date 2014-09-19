@@ -83,6 +83,7 @@ AdbImpl::~AdbImpl() {}
 Status AdbImpl::GetDevices(std::vector<std::string>* devices) {
   std::string response;
   Status status = ExecuteCommand("host:devices", &response);
+  printf (">>>>>>>> AdbImpl::GetDevices %s \n", status.message().c_str());
   if (!status.IsOk())
     return status;
   base::StringTokenizer lines(response, "\n");
@@ -166,12 +167,13 @@ Status AdbImpl::CheckAppInstalled(
 Status AdbImpl::CheckTizenAppInstalled(
     const std::string& device_serial, const std::string& app_id) {
   std::string response;
-  std::string command = "su - app -c "\
-                        "\"export XDG_RUNTIME_DIR=\"/run/user/5000\";"\
+  std::string command = "su - app -c \""\
+                        //"export XDG_RUNTIME_DIR=\"/run/user/5000\";"
                         "export DBUS_SESSION_BUS_ADDRESS=unix:"\
                         "path=/run/user/5000/dbus/user_bus_socket; "\
                         "xwalkctl\"";
   Status status = ExecuteHostShellCommand(device_serial, command, &response);
+  printf (">>>>>>>> AdbImpl::CheckInstall %s \n", status.message().c_str());
   if (!status.IsOk())
     return status;
   if (response.find(app_id) == std::string::npos)
@@ -223,17 +225,28 @@ Status AdbImpl::LaunchTizenApp(
     const std::string& app_id) {
   std::string response;
   std::string shell_command = "su - app -c \" "\
-                              "export XDG_RUNTIME_DIR=\"/run/user/5000\"; "\
+                              //"export XDG_RUNTIME_DIR=\"/run/user/5000\"; "
                               "export DBUS_SESSION_BUS_ADDRESS=unix:"\
                               "path=/run/user/5000/dbus/user_bus_socket; "\
                               "xwalkctl; xwalk-launcher " + app_id + "\"";
 
+  std::string shell_command_new = "su - app -c \" "\
+                              //"export XDG_RUNTIME_DIR=\"/run/user/5000\"; "
+                              "export DBUS_SESSION_BUS_ADDRESS=unix:"\
+                              "path=/run/user/5000/dbus/user_bus_socket; "\
+                              "xwalkctl; xwalk-launcher " + app_id + " -d \"";
+
+
   Status status = ExecuteHostShellCommand(device_serial,
-                                          shell_command,
+                                          shell_command_new,
                                           &response);
+  printf (">>>>>>>> AdbImpl::launched \n");
   //xwalk-laucher no responce
   //if (!status.IsOk())
   //  return status;
+  if (response.find("Unknown option -d") != std::string::npos)
+    status = ExecuteHostShellCommand(device_serial, shell_command, &response);
+
   if (response.find("Error") != std::string::npos)
     printf("Launch failed %s \n", response.c_str());
   return Status(kOk);
@@ -324,7 +337,7 @@ Status AdbImpl::ExecuteCommand(
   if (command.find("ps auxww") != std::string::npos)
     sleep(1);
   int delta_time = 30;
-  if (command.find("xwalk-launcher") != std::string::npos)
+  if (command.find("xwalkctl") != std::string::npos)
     delta_time = 3;
   Status status = response_buffer->GetResponse(
       response, base::TimeDelta::FromSeconds(delta_time));
