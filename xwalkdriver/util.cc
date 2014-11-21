@@ -20,8 +20,8 @@
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view.h"
-#include "xwalk/test/xwalkdriver/xwalk/zip.h"
 #include "xwalk/test/xwalkdriver/key_converter.h"
+#include "third_party/zlib/google/zip.h"
 
 std::string GenerateId() {
   uint64 msb = base::RandUint64();

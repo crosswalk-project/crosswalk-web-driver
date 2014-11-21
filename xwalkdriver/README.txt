@@ -40,14 +40,15 @@ binary in the build folder named 'xwalkdriver'. Or download the binary from
     }
 
 (3) Pakage your app by execute command
-    python make_apk.py --manifest=YOUR_APP_PATH/manifest.json
+    python make_apk.py --package=YOUR_APP_PACKAGE_NAME --manifest=YOUR_APP_PATH/manifest.json --arch=YOUR_DEVICE_ARCH
 
 (4) Install your apk to device.
 
-(5) Install Selenium package by executing command
-    pip install selenium
+(5) Install Selenium package by executing command in sudo mode
+    apt-get install python-pip && pip install selenium
 
 (6) Run xwalkdriver binary.
+    $./xwalkdriver
 
 (7) Execute following commands to test:
 $ python
@@ -66,30 +67,40 @@ capabilities = {
 
     
 For Tizen xwalk:
-(1) Install and launch the xwalk as server mode on Tizen IVI:
-su - app
-export XDG_RUNTIME_DIR="/run/user/5000"
-export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/5000/dbus/user_bus_socket
-systemctl --user status xwalk.servicek
-xwalkctl -i /'path'/wrt-rtbin-tizen-tests.xpk
+(1) Check status of sdbd_tcp.service on Tizen IVI, start it if neecessary:
+systemctl status sdbd_tcp
+systemctl start sdbd_tcp
 
-(2) Set remote debug port by insert "--remote-debugging-port='PORT'" into "/usr/lib/systemd/user/xwalk.service" on Tizen IVI.
-(3) Connect Tizen IVI and PC with sdb
-    a). Run the follow command on Tizen IVI: #systemd start sdbd_tcp
-    b). Run the follow command on PC: $sdb connect <tizen ivi ip>
-    c). Run the follow command on PC: $sdb root on
-(4) If Selenium package not installed on PC. Install Selenium package by executing command
-    pip install selenium
-(5) Run xwalkdriver binary on PC with command:
+(2) Connect Tizen IVI and PC with sdb
+    a). Run the command on PC: han@hanlab:~$ sdb connect <tizen ivi ip>
+    b). Run the command on PC: han@hanlab:~$ sdb root on
+    c). Run the command on PC: han@hanlab:~$ sdb push webapi.xpk /home/app
+
+(3) Install and launch the xwalk as server mode on Tizen IVI:
+su - app
+systemctl --user status xwalk
+pkgcmd -i -t xpk -q -p /home/app/webapi.xpk
+
+(4) Set remote debug port by insert "--remote-debugging-port='PORT'" into "/usr/lib/systemd/user/xwalk.service" on Tizen IVI.
+
+(5) Restart the xwalk.service on Tizen IVI:
+systemctl --user daemon-reload
+systemctl --user restart xwalk
+
+(6) If Selenium package not installed on PC. Install Selenium package by executing command
+    apt-get install python-pip && pip install selenium
+
+(7) Run xwalkdriver binary on PC with command:
     $./xwalkdriver --sdb-port=26099
-(6) Execute following commands to test(Note to replace your tizen application Id):
+
+(8) Execute following commands to test(Note to replace your tizen application Id):
 $ python
 >>> from selenium import webdriver
 >>> 
 capabilities = {
   'xwalkOptions': {
     'tizenDebuggerAddress': '10.238.158.97:9333',
-    'tizenAppId': 'ihogjblnkegkonaaaddobhoncmdpbomi',
+    'tizenAppId': 'xwalk.ihogjblnkegkonaaaddobhoncmdpbomi',
   }
 }
 
