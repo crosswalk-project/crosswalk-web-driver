@@ -37,10 +37,10 @@
 #include "xwalk/test/xwalkdriver/xwalk/user_data_dir.h"
 #include "xwalk/test/xwalkdriver/xwalk/version.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view.h"
-#include "xwalk/test/xwalkdriver/xwalk/zip.h"
 #include "xwalk/test/xwalkdriver/net/port_server.h"
 #include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 #include "crypto/sha2.h"
+#include "third_party/zlib/google/zip.h"
 
 #if defined(OS_POSIX)
 #include <fcntl.h>  // NOLINT(build/include_order)
