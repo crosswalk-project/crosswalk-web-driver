@@ -44,8 +44,6 @@ class Adb {
                                    const std::string& app_id) = 0;
   virtual Status CheckTizenAppInstalled(const std::string& device_serial,
                                         const std::string& app_id) = 0;
-  virtual std::string GetPidByTizenAppId(const std::string& device_serial,
-                                         const std::string& app_id) = 0;
 
 };
 
