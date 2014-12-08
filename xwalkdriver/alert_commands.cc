@@ -4,8 +4,6 @@
 
 #include "xwalk/test/xwalkdriver/alert_commands.h"
 
-#include <string>
-
 #include "base/callback.h"
 #include "base/values.h"
 #include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
@@ -46,7 +44,7 @@ Status ExecuteGetAlert(
     WebView* web_view,
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value) {
-  value->reset(base::Value::CreateBooleanValue(
+  value->reset(new base::FundamentalValue(
       web_view->GetJavaScriptDialogManager()->IsDialogOpen()));
   return Status(kOk);
 }
@@ -61,7 +59,7 @@ Status ExecuteGetAlertText(
       web_view->GetJavaScriptDialogManager()->GetDialogMessage(&message);
   if (status.IsError())
     return status;
-  value->reset(base::Value::CreateStringValue(message));
+  value->reset(new base::StringValue(message));
   return Status(kOk);
 }
 

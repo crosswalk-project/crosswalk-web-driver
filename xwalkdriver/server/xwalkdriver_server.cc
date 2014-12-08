@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <stdio.h>
+#include <locale>
 #include <string>
 #include <vector>
 
@@ -17,6 +18,7 @@
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
+#include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
@@ -31,9 +33,12 @@
 #include "net/server/http_server.h"
 #include "net/server/http_server_request_info.h"
 #include "net/server/http_server_response_info.h"
-#include "net/socket/tcp_listen_socket.h"
+#include "net/socket/tcp_server_socket.h"
 
 namespace {
+
+const char* kLocalHostAddress = "127.0.0.1";
+const int kBufferSize = 100 * 1024 * 1024;  // 100 MB
 
 typedef base::Callback<
     void(const net::HttpServerRequestInfo&, const HttpResponseSenderFunc&)>
@@ -47,14 +52,23 @@ class HttpServer : public net::HttpServer::Delegate {
 
   virtual ~HttpServer() {}
 
-  bool Start(int port) {
-    server_ = new net::HttpServer(
-        net::TCPListenSocketFactory("0.0.0.0", port), this);
+  bool Start(int port, bool allow_remote) {
+    std::string binding_ip = kLocalHostAddress;
+    if (allow_remote)
+      binding_ip = "0.0.0.0";
+    scoped_ptr<net::ServerSocket> server_socket(
+        new net::TCPServerSocket(NULL, net::NetLog::Source()));
+    server_socket->ListenWithAddressAndPort(binding_ip, port, 1);
+    server_.reset(new net::HttpServer(server_socket.Pass(), this));
     net::IPEndPoint address;
     return server_->GetLocalAddress(&address) == net::OK;
   }
 
   // Overridden from net::HttpServer::Delegate:
+  virtual void OnConnect(int connection_id) OVERRIDE {
+    server_->SetSendBufferSize(connection_id, kBufferSize);
+    server_->SetReceiveBufferSize(connection_id, kBufferSize);
+  }
   virtual void OnHttpRequest(int connection_id,
                              const net::HttpServerRequestInfo& info) OVERRIDE {
     handle_request_func_.Run(
@@ -82,7 +96,7 @@ class HttpServer : public net::HttpServer::Delegate {
   }
 
   HttpRequestHandlerFunc handle_request_func_;
-  scoped_refptr<net::HttpServer> server_;
+  scoped_ptr<net::HttpServer> server_;
   base::WeakPtrFactory<HttpServer> weak_factory_;  // Should be last.
 };
 
@@ -96,8 +110,23 @@ void SendResponseOnCmdThread(
 
 void HandleRequestOnCmdThread(
     HttpHandler* handler,
+    const std::vector<std::string>& whitelisted_ips,
     const net::HttpServerRequestInfo& request,
     const HttpResponseSenderFunc& send_response_func) {
+  if (!whitelisted_ips.empty()) {
+    std::string peer_address = request.peer.ToStringWithoutPort();
+    if (peer_address != kLocalHostAddress &&
+        std::find(whitelisted_ips.begin(), whitelisted_ips.end(),
+                  peer_address) == whitelisted_ips.end()) {
+      LOG(INFO) << "unauthorized access from " << request.peer.ToString();
+      scoped_ptr<net::HttpServerResponseInfo> response(
+          new net::HttpServerResponseInfo(net::HTTP_UNAUTHORIZED));
+      response->SetBody("Unauthorized access", "text/plain");
+      send_response_func.Run(response.Pass());
+      return;
+    }
+  }
+
   handler->Handle(request, send_response_func);
 }
 
@@ -126,9 +155,10 @@ void StopServerOnIOThread() {
 }
 
 void StartServerOnIOThread(int port,
+                           bool allow_remote,
                            const HttpRequestHandlerFunc& handle_request_func) {
   scoped_ptr<HttpServer> temp_server(new HttpServer(handle_request_func));
-  if (!temp_server->Start(port)) {
+  if (!temp_server->Start(port, allow_remote)) {
     printf("Port not available. Exiting...\n");
     exit(1);
   }
@@ -136,6 +166,8 @@ void StartServerOnIOThread(int port,
 }
 
 void RunServer(int port,
+               bool allow_remote,
+               const std::vector<std::string>& whitelisted_ips,
                const std::string& url_base,
                int adb_port,
                int sdb_port,
@@ -153,12 +185,13 @@ void RunServer(int port,
                       sdb_port,
                       port_server.Pass());
   HttpRequestHandlerFunc handle_request_func =
-      base::Bind(&HandleRequestOnCmdThread, &handler);
+      base::Bind(&HandleRequestOnCmdThread, &handler, whitelisted_ips);
 
   io_thread.message_loop()
       ->PostTask(FROM_HERE,
                  base::Bind(&StartServerOnIOThread,
                             port,
+                            allow_remote,
                             base::Bind(&HandleRequestOnIOThread,
                                        cmd_loop.message_loop_proxy(),
                                        handle_request_func)));
@@ -180,9 +213,18 @@ int main(int argc, char *argv[]) {
   base::AtExitManager at_exit;
   CommandLine* cmd_line = CommandLine::ForCurrentProcess();
 
+#if defined(OS_LINUX)
+  // Select the locale from the environment by passing an empty string instead
+  // of the default "C" locale. This is particularly needed for the keycode
+  // conversion code to work.
+  setlocale(LC_ALL, "");
+#endif
+
   // Parse command line flags.
   int port = 9515;
   int adb_port = 5037;
+  bool allow_remote = false;
+  std::vector<std::string> whitelisted_ips;
   int sdb_port = 26099;
   std::string url_base;
   scoped_ptr<PortServer> port_server;
@@ -195,9 +237,12 @@ int main(int argc, char *argv[]) {
         "log-path=FILE", "write server log to file instead of stderr, "
             "increases log level to INFO",
         "verbose", "log verbosely",
+        "version", "print the version number and exit",
         "silent", "log nothing",
         "url-base", "base URL path prefix for commands, e.g. wd/url",
         "port-server", "address of server to contact for reserving a port",
+        "whitelisted-ips", "comma-separated whitelist of remote IPv4 addresses "
+            "which are allowed to connect to remote XwalkDriver",
     };
     for (size_t i = 0; i < arraysize(kOptionAndDescriptions) - 1; i += 2) {
       options += base::StringPrintf(
@@ -205,6 +250,10 @@ int main(int argc, char *argv[]) {
           kOptionAndDescriptions[i], kOptionAndDescriptions[i + 1]);
     }
     printf("Usage: %s [OPTIONS]\n\nOptions\n%s", argv[0], options.c_str());
+    return 0;
+  }
+  if (cmd_line->HasSwitch("v") || cmd_line->HasSwitch("version")) {
+    printf("XwalkDriver %s\n", kXwalkDriverVersion);
     return 0;
   }
   if (cmd_line->HasSwitch("port")) {
@@ -220,7 +269,6 @@ int main(int argc, char *argv[]) {
       return 1;
     }
   }
-
   if (cmd_line->HasSwitch("sdb-port")) {
     if (!base::StringToInt(cmd_line->GetSwitchValueASCII("sdb-port"),
                            &sdb_port)) {
@@ -252,9 +300,22 @@ int main(int argc, char *argv[]) {
     url_base = "/" + url_base;
   if (url_base[url_base.length() - 1] != '/')
     url_base = url_base + "/";
+  if (cmd_line->HasSwitch("whitelisted-ips")) {
+    allow_remote = true;
+    std::string whitelist = cmd_line->GetSwitchValueASCII("whitelisted-ips");
+    base::SplitString(whitelist, ',', &whitelisted_ips);
+  }
   if (!cmd_line->HasSwitch("silent")) {
     printf(
         "Starting XwalkDriver (v%s) on port %d\n", kXwalkDriverVersion, port);
+	if (!allow_remote) {
+	  printf("Only local connections are allowed.\n");
+	} else if (!whitelisted_ips.empty()) {
+	  printf("Remote connections are allowed by a whitelist (%s).\n",
+		     cmd_line->GetSwitchValueASCII("whitelisted-ips").c_str());
+	} else {
+	  printf("All remote connections are allowed. Use a whitelist instead!\n");
+	}
     fflush(stdout);
   }
 
@@ -262,6 +323,7 @@ int main(int argc, char *argv[]) {
     printf("Unable to initialize logging. Exiting...\n");
     return 1;
   }
-  RunServer(port, url_base, adb_port, sdb_port, port_server.Pass());
+  RunServer(port, allow_remote, whitelisted_ips,
+			url_base, adb_port, sdb_port, port_server.Pass());
   return 0;
 }
