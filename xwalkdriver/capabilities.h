@@ -19,9 +19,9 @@
 
 namespace base {
 class DictionaryValue;
+class CommandLine;
 }
 
-class CommandLine;
 class Status;
 
 class Switches {

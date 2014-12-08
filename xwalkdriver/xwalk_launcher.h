@@ -14,12 +14,12 @@
 #include "xwalk/test/xwalkdriver/capabilities.h"
 #include "xwalk/test/xwalkdriver/net/sync_websocket_factory.h"
 
-class CommandLine;
 class DevToolsEventListener;
 
 namespace base {
 class DictionaryValue;
 class FilePath;
+class CommandLine;
 }
 
 class Xwalk;

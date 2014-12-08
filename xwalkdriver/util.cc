@@ -31,7 +31,7 @@ std::string GenerateId() {
 
 namespace {
 
-Status FlattenStringArray(const base::ListValue* src,base::string16* dest) {
+Status FlattenStringArray(const base::ListValue* src, base::string16* dest) {
   base::string16 keys;
   for (size_t i = 0; i < src->GetSize(); ++i) {
     base::string16 keys_list_part;
