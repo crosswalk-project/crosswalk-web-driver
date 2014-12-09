@@ -185,19 +185,23 @@ Status DeviceManager::AcquireSpecificDevice(
   if (status.IsError())
     return status;
 
-  if (std::find(devices.begin(), devices.end(), device_serial) == devices.end())
-    return Status(kUnknownError,
-        "Device " + device_serial + " is not online");
-
-  base::AutoLock lock(devices_lock_);
-  if (IsDeviceLocked(device_serial)) {
-    status = Status(kUnknownError,
-        "Device " + device_serial + " is already in use");
-  } else {
-    device->reset(LockDevice(device_serial));
-    status = Status(kOk);
-  }
-  return status;
+  for (std::vector<std::string>::const_iterator iter = devices.begin();
+       iter != devices.end(); ++iter) {
+    if ((*iter).find(device_serial) != std::string::npos) {
+      base::AutoLock lock(devices_lock_);
+      if (IsDeviceLocked(*iter)) {
+        // since we add authorization for connecting xwalkdriver by 
+        // whitelisted-ips now, we make it possible to relaunch the running
+        // app by authorized developers who should take care of it and make
+        // their own decisions whether the running app can be interruptable.
+        active_devices_.remove(*iter);
+      }
+      device->reset(LockDevice(*iter));
+      return Status(kOk);
+    }
+  }    
+  
+  return Status(kUnknownError, "Device " + device_serial + " is not online");
 }
 
 void DeviceManager::ReleaseDevice(const std::string& device_serial) {

@@ -316,11 +316,17 @@ Status LaunchTizenXwalk(
     scoped_ptr<Xwalk>* xwalk) {
   Status status(kOk);
   scoped_ptr<Device> device;
-  if (capabilities.tizen_device_serial.empty()) {
+  // In real tizen device, its device serial is always same as its
+  // net address.
+  if (capabilities.tizen_device_serial.empty() && 
+      capabilities.tizen_debugger_address.host().empty()) {
     status = device_manager->AcquireDevice(&device);
-  } else {
+  } else if (!capabilities.tizen_device_serial.empty()) {
     status = device_manager->AcquireSpecificDevice(
         capabilities.tizen_device_serial, &device);
+  } else {
+    status = device_manager->AcquireSpecificDevice(
+        capabilities.tizen_debugger_address.host(), &device);
   }
 
   if(status.IsError()) {
