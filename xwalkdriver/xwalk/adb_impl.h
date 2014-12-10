@@ -58,6 +58,8 @@ class AdbImpl : public Adb {
                                    const std::string& app_id) OVERRIDE;
   virtual Status CheckTizenAppInstalled(const std::string& device_serial,
                                         const std::string& app_id) OVERRIDE;
+  bool IsTizenAppRunning(const std::string& device_serial,
+                         const std::string& app_id);
  private:
   Status ExecuteCommand(const std::string& command,
                         std::string* response);

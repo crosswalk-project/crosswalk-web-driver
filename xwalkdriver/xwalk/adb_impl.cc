@@ -83,7 +83,6 @@ AdbImpl::~AdbImpl() {}
 Status AdbImpl::GetDevices(std::vector<std::string>* devices) {
   std::string response;
   Status status = ExecuteCommand("host:devices", &response);
-  printf (">>>>>>>> AdbImpl::GetDevices %s \n", status.message().c_str());
   if (!status.IsOk())
     return status;
   base::StringTokenizer lines(response, "\n");
@@ -219,11 +218,21 @@ Status AdbImpl::Launch(
 Status AdbImpl::LaunchTizenApp(
     const std::string& device_serial,
     const std::string& app_id) {
+  Status status(kOk);
+  // when re-launch tizen app by invoking app_launcher on tizen, the app
+  // is an old process, so we need to kill it first.
+  if (IsTizenAppRunning(device_serial, app_id))
+    status = ForceStopTizenApp(device_serial, app_id);
+
+  if (status.IsError())
+    return Status(kUnknownError, 
+                  "Failed to re-launch " + app_id + " on device " + device_serial);
+
   std::string response;
   std::string app_launcher_cmd = "su - app -c \" "\
                               "app_launcher -s " + app_id + " -d \"";
 
-  Status status = ExecuteHostShellCommand(device_serial, app_launcher_cmd, &response);
+  status = ExecuteHostShellCommand(device_serial, app_launcher_cmd, &response);
 
   printf (">>>>>>>> AdbImpl::launched \n");
   if (status.IsError())
@@ -245,6 +254,17 @@ Status AdbImpl::ForceStopTizenApp(
   std::string app_launcher_cmd = "su - app -c \" "\
                       "app_launcher -k " + app_id + " \"";
   return  ExecuteHostShellCommand(device_serial, app_launcher_cmd, &response);
+}
+
+bool AdbImpl::IsTizenAppRunning(
+    const std::string& device_serial,
+    const std::string& app_id) {
+  std::string  response;
+  std::string app_launcher_cmd = "su - app -c \"app_launcher -S\"";
+
+  Status status = ExecuteHostShellCommand(device_serial, app_launcher_cmd, &response);
+
+  return (response.find(app_id) != std::string::npos);
 }
 
 Status AdbImpl::GetPidByName(const std::string& device_serial,
