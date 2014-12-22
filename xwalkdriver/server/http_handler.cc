@@ -21,6 +21,7 @@
 #include "xwalk/test/xwalkdriver/capabilities.h"
 #include "xwalk/test/xwalkdriver/xwalk/adb_impl.h"
 #include "xwalk/test/xwalkdriver/xwalk/device_manager.h"
+#include "xwalk/test/xwalkdriver/xwalk/sdb_impl.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/net/port_server.h"
 #include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
@@ -81,12 +82,12 @@ HttpHandler::HttpHandler(
   socket_factory_ = CreateSyncWebSocketFactory(context_getter_.get());
 
   if (adb_port) {
-    adb_.reset(new AdbImpl(io_task_runner, adb_port));
+    device_bridge_.reset(new AdbImpl(io_task_runner, adb_port));
   } else if (sdb_port) {
-    adb_.reset(new AdbImpl(io_task_runner, sdb_port));
+    device_bridge_.reset(new SdbImpl(io_task_runner, sdb_port));
   }
 
-  device_manager_.reset(new DeviceManager(adb_.get()));
+  device_manager_.reset(new DeviceManager(device_bridge_.get()));
   port_server_ = port_server.Pass();
   port_manager_.reset(new PortManager(12000, 13000));
 

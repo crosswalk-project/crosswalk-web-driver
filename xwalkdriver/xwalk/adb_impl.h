@@ -10,7 +10,7 @@
 
 #include "base/compiler_specific.h"
 #include "base/memory/ref_counted.h"
-#include "xwalk/test/xwalkdriver/xwalk/adb.h"
+#include "xwalk/test/xwalkdriver/xwalk/device_bridge.h"
 
 namespace base {
 class SingleThreadTaskRunner;
@@ -18,14 +18,14 @@ class SingleThreadTaskRunner;
 
 class Status;
 
-class AdbImpl : public Adb {
+class AdbImpl : public DeviceBridge {
  public:
   explicit AdbImpl(
       const scoped_refptr<base::SingleThreadTaskRunner>& io_message_loop_proxy,
       int port);
   virtual ~AdbImpl();
 
-  // Overridden from Adb:
+  // Overridden from DeviceBridge:
   virtual Status GetDevices(std::vector<std::string>* devices) OVERRIDE;
   virtual Status ForwardPort(const std::string& device_serial,
                              int local_port,
@@ -41,25 +41,13 @@ class AdbImpl : public Adb {
   virtual Status SetDebugApp(const std::string& device_serial,
                              const std::string& package) OVERRIDE;
   virtual Status Launch(const std::string& device_serial,
-                        const std::string& package,
-                        const std::string& activity) OVERRIDE;
+                        const std::string& app_id) OVERRIDE;
   virtual Status ForceStop(const std::string& device_serial,
                            const std::string& package) OVERRIDE;
   virtual Status GetPidByName(const std::string& device_serial,
                               const std::string& process_name,
                               int* pid) OVERRIDE;
-
-  virtual Status ForwardTizenPort(const std::string& device_serial,
-                                  int local_port,
-                                  int remote_port) OVERRIDE;
-  virtual Status LaunchTizenApp(const std::string& device_serial,
-                                const std::string& app_id) OVERRIDE;
-  virtual Status ForceStopTizenApp(const std::string& device_serial,
-                                   const std::string& app_id) OVERRIDE;
-  virtual Status CheckTizenAppInstalled(const std::string& device_serial,
-                                        const std::string& app_id) OVERRIDE;
-  bool IsTizenAppRunning(const std::string& device_serial,
-                         const std::string& app_id);
+  virtual std::string GetOperatingSystemName() OVERRIDE;
  private:
   Status ExecuteCommand(const std::string& command,
                         std::string* response);

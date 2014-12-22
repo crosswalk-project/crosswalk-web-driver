@@ -26,11 +26,16 @@
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
 #include "base/values.h"
+#include "crypto/sha2.h"
+#include "third_party/zlib/google/zip.h"
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_android_impl.h"
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_desktop_impl.h"
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_existing_impl.h"
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_finder.h"
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_tizen_impl.h"
+#include "xwalk/test/xwalkdriver/xwalk/device.h"
+#include "xwalk/test/xwalkdriver/xwalk/tizen_device.h"
+#include "xwalk/test/xwalkdriver/xwalk/android_device.h"
 #include "xwalk/test/xwalkdriver/xwalk/device_manager.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_http_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
@@ -39,8 +44,6 @@
 #include "xwalk/test/xwalkdriver/xwalk/web_view.h"
 #include "xwalk/test/xwalkdriver/net/port_server.h"
 #include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
-#include "crypto/sha2.h"
-#include "third_party/zlib/google/zip.h"
 
 #if defined(OS_POSIX)
 #include <fcntl.h>  // NOLINT(build/include_order)
@@ -273,12 +276,14 @@ Status LaunchAndroidXwalk(
     switches.SetSwitch(kCommonSwitches[i]);
   switches.SetSwitch("disable-fre");
   switches.SetSwitch("enable-remote-debugging");
-  status = device->SetUp(capabilities.android_package,
-                         capabilities.android_activity,
-                         capabilities.android_process,
+
+  std::string app_id;
+  int unuse_remote_port;
+  app_id = capabilities.android_package + "/" + capabilities.android_activity;
+  status = device->SetUp(app_id,
                          switches.ToString(),
-                         capabilities.android_use_running_app,
-                         port);
+                         port,
+                         unuse_remote_port);
   if (status.IsError()) {
     device->TearDown();
     return status;
@@ -334,30 +339,20 @@ Status LaunchTizenXwalk(
     return status;
   }
   int remote_port = capabilities.tizen_debugger_address.port();
-  status = device->SetUpTizenApp(capabilities.tizen_app_id,
+  Switches switches;
+  status = device->SetUp(capabilities.tizen_app_id,
+                                 switches.ToString(),
                                  local_port,
                                  remote_port);
 
   scoped_ptr<DevToolsHttpClient> devtools_client;
-
-  if (capabilities.tizen_use_running_app) {
-    status = WaitForDevToolsAndCheckVersion(
-        capabilities.tizen_debugger_address, context_getter, socket_factory,
-        &devtools_client);
-    if (status.IsError()) {
-      return Status(kUnknownError, "cannot connect to xwalk at " +
-                        capabilities.tizen_debugger_address.ToString(),
-                    status);
-    }
-  } else {
-    status = WaitForDevToolsAndCheckVersion(NetAddress(local_port),
-                                            context_getter,
-                                            socket_factory,
-                                            &devtools_client);
-    if (status.IsError()) {
-      device->TearDownTizenApp();
-      return status;
-    }
+  status = WaitForDevToolsAndCheckVersion(NetAddress(local_port),
+                                          context_getter,
+                                          socket_factory,
+                                          &devtools_client);
+  if (status.IsError()) {
+    device->TearDown();
+    return status;
   }
 
   xwalk->reset(new XwalkTizenImpl(devtools_client.Pass(),
