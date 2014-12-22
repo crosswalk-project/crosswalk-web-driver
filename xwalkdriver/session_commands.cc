@@ -192,7 +192,7 @@ Status ExecuteGetCurrentWindowHandle(
     Session* session,
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value) {
-  WebView* web_view = NULL;
+  WebView* web_view = nullptr;
   Status status = session->GetTargetWindow(&web_view);
   if (status.IsError())
     return status;
@@ -213,7 +213,7 @@ Status ExecuteClose(
   bool is_last_web_view = web_view_ids.size() == 1u;
   web_view_ids.clear();
 
-  WebView* web_view = NULL;
+  WebView* web_view = nullptr;
   status = session->GetTargetWindow(&web_view);
   if (status.IsError())
     return status;
@@ -382,7 +382,7 @@ Status ExecuteIsLoading(
     Session* session,
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value) {
-  WebView* web_view = NULL;
+  WebView* web_view = nullptr;
   Status status = session->GetTargetWindow(&web_view);
   if (status.IsError())
     return status;
@@ -423,11 +423,28 @@ Status ExecuteGetWindowPosition(
     Session* session,
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value) {
-  (void) session;
-  (void) params;
-  (void) value;
+  WebView* web_view = nullptr;
+  Status status = session->GetTargetWindow(&web_view);
+  if (status.IsError())
+    return status;
 
-  // TODO(Peter Wang): Implement "get position" of xwalk window.
+  status = web_view->ConnectIfNecessary();
+  if (status.IsError())
+    return status;
+
+  base::ListValue args;
+  const char* kGetWindowPositionScript =
+      "function() {"
+      "  var position = {'x':0, 'y':0};"
+      "  position.x = window.screenX;"
+      "  position.y = window.screenY;"
+      "  return position;"
+      "}";
+
+  status = web_view->CallFunction(session->GetCurrentFrameId(),
+                                  kGetWindowPositionScript, args, value);
+  if (status.IsError())
+    return status;
 
   return Status(kOk);
 }
@@ -449,11 +466,28 @@ Status ExecuteGetWindowSize(
     Session* session,
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value) {
-  (void) session;
-  (void) params;
-  (void) value;
+  WebView* web_view = nullptr;
+  Status status = session->GetTargetWindow(&web_view);
+  if (status.IsError())
+    return status;
 
-  // TODO(Peter Wang): Implement "get size" of xwalk window.
+  status = web_view->ConnectIfNecessary();
+  if (status.IsError())
+    return status;
+
+  base::ListValue args;
+  const char* kGetWindowSizeScript =
+      "function() {"
+      "  var size = {'height':0, 'width':0};"
+      "  size.height = window.screen.height;"
+      "  size.width = window.screen.width;"
+      "  return size;"
+      "}";
+
+  status = web_view->CallFunction(session->GetCurrentFrameId(),
+                                  kGetWindowSizeScript, args, value);
+  if (status.IsError())
+    return status;
 
   return Status(kOk);
 }
