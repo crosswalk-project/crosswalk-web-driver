@@ -4,16 +4,17 @@
 
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_tizen_impl.h"
 
+#include "xwalk/test/xwalkdriver/net/port_server.h"
+#include "xwalk/test/xwalkdriver/xwalk/device.h"
 #include "xwalk/test/xwalkdriver/xwalk/device_manager.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_http_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/net/port_server.h"
+#include "xwalk/test/xwalkdriver/xwalk/tizen_device.h"
 
 XwalkTizenImpl::XwalkTizenImpl(
     scoped_ptr<DevToolsHttpClient> client,
     ScopedVector<DevToolsEventListener>& devtools_event_listeners,
     scoped_ptr<PortReservation> port_reservation,
-    // scoped_ptr<TizenDevice> device)
     scoped_ptr<Device> device)
     : XwalkImpl(client.Pass(),
                  devtools_event_listeners,
@@ -27,6 +28,6 @@ std::string XwalkTizenImpl::GetOperatingSystemName() {
 }
 
 Status XwalkTizenImpl::QuitImpl() {
-  return device_->TearDownTizenApp();
+  return device_->TearDown();
 }
 

@@ -11,13 +11,8 @@
 #include "base/memory/scoped_ptr.h"
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_impl.h"
 
-class DevToolsHttpClient;
 class Device;
-class TizenDevice {
- public:
-  TizenDevice() {}
-  ~TizenDevice() {}
-};
+class DevToolsHttpClient;
 
 class XwalkTizenImpl : public XwalkImpl {
  public:
@@ -25,7 +20,6 @@ class XwalkTizenImpl : public XwalkImpl {
       scoped_ptr<DevToolsHttpClient> client,
       ScopedVector<DevToolsEventListener>& devtools_event_listeners,
       scoped_ptr<PortReservation> port_reservation,
-      //scoped_ptr<TizenDevice> device);
       scoped_ptr<Device> device);
   virtual ~XwalkTizenImpl();
 

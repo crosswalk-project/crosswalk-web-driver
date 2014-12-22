@@ -14,51 +14,13 @@
 #include "base/memory/scoped_ptr.h"
 #include "base/synchronization/lock.h"
 
-class Adb;
+class DeviceBridge;
 class Status;
-class DeviceManager;
-
-class Device {
- public:
-  ~Device();
-
-  Status SetUp(const std::string& package,
-               const std::string& activity,
-               const std::string& process,
-               const std::string& args,
-               bool use_running_app,
-               int port);
-  Status SetUpTizenApp(const std::string& app_id,
-                       int local_port,
-                       int remote_port);
-
-  Status TearDown();
-  Status TearDownTizenApp();
-
- private:
-  friend class DeviceManager;
-
-  Device(const std::string& device_serial,
-         Adb* adb,
-         base::Callback<void()> release_callback);
-
-  Status ForwardDevtoolsPort(const std::string& package,
-                             const std::string& process,
-                             std::string& device_socket,
-                             int port);
-
-  const std::string serial_;
-  std::string active_package_;
-  std::string active_tizen_app_;
-  Adb* adb_;
-  base::Callback<void()> release_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(Device);
-};
+class Device;
 
 class DeviceManager {
  public:
-  explicit DeviceManager(Adb* adb);
+  explicit DeviceManager(DeviceBridge* device_bridge);
   ~DeviceManager();
 
   // Returns a device which will not be reassigned during its lifetime.
@@ -77,7 +39,7 @@ class DeviceManager {
 
   base::Lock devices_lock_;
   std::list<std::string> active_devices_;
-  Adb* adb_;
+  DeviceBridge* device_bridge_;
 
   DISALLOW_COPY_AND_ASSIGN(DeviceManager);
 };

@@ -13,146 +13,23 @@
 #include "base/logging.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/stringprintf.h"
-#include "xwalk/test/xwalkdriver/xwalk/adb.h"
+#include "base/strings/string_util.h"
+#include "xwalk/test/xwalkdriver/xwalk/android_device.h"
+#include "xwalk/test/xwalkdriver/xwalk/device.h"
+#include "xwalk/test/xwalkdriver/xwalk/device_bridge.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/xwalk/tizen_device.h"
 
-
-Device::Device(
-    const std::string& device_serial, Adb* adb,
-    base::Callback<void()> release_callback)
-    : serial_(device_serial),
-      adb_(adb),
-      release_callback_(release_callback) {}
-
-Device::~Device() {
-  release_callback_.Run();
-}
-
-Status Device::SetUpTizenApp(const std::string& app_id,
-                             int local_port,
-                             int remote_port) {
-  Status status = Status(kOk);
-  if (!active_tizen_app_.empty())
-    return Status(kUnknownError,
-        active_tizen_app_ + " was launched and has not been quit");
-
-  status = adb_->CheckTizenAppInstalled(serial_, app_id);
-  if (status.IsError())
-    return status;
-
-  status = adb_->LaunchTizenApp(serial_, app_id);
-  active_tizen_app_ = app_id;
-  status = adb_->ForwardTizenPort(serial_, local_port, remote_port);
-  return status;
-}
-
-Status Device::SetUp(const std::string& package,
-                     const std::string& activity,
-                     const std::string& process,
-                     const std::string& args,
-                     bool use_running_app,
-                     int port) {
-  if (!active_package_.empty())
-    return Status(kUnknownError,
-        active_package_ + " was launched and has not been quit");
-
-  Status status = adb_->CheckAppInstalled(serial_, package);
-  if (status.IsError())
-    return status;
-
-  std::string known_activity;
-  std::string command_line_file;
-  std::string device_socket;
-  std::string exec_name;
-
-  if (!use_running_app) {
-    status = adb_->ClearAppData(serial_, package);
-    if (status.IsError())
-      return status;
-
-    if (!known_activity.empty()) {
-      if (!activity.empty() ||
-          !process.empty())
-        return Status(kUnknownError, "known package " + package +
-                      " does not accept activity/process");
-    } else if (activity.empty()) {
-      return Status(kUnknownError, "WebView apps require activity name");
-    }
-
-    if (!command_line_file.empty()) {
-      status = adb_->SetCommandLineFile(
-          serial_, command_line_file, exec_name, args);
-      if (status.IsError())
-        return status;
-    }
-
-    status = adb_->Launch(serial_, package,
-                          known_activity.empty() ? activity : known_activity);
-    if (status.IsError())
-      return status;
-
-    active_package_ = package;
-  }
-  this->ForwardDevtoolsPort(package, process, device_socket, port);
-
-  return status;
-}
-
-Status Device::ForwardDevtoolsPort(const std::string& package,
-                                   const std::string& process,
-                                   std::string& device_socket,
-                                   int port) {
-  if (device_socket.empty()) {
-    // Assume this is a WebView app.
-    int pid;
-    Status status = adb_->GetPidByName(serial_,
-                                       process.empty() ? package : process,
-                                       &pid);
-    if (status.IsError()) {
-      if (process.empty())
-        status.AddDetails(
-            "process name must be specified if not equal to package name");
-      return status;
-    }
-    device_socket = base::StringPrintf("%s_devtools_remote", package.c_str());
-    printf("Device socket is: %s \n", device_socket.c_str());
-  }
-
-  return adb_->ForwardPort(serial_, port, device_socket);
-}
-
-Status Device::TearDown() {
-  if (!active_package_.empty()) {
-    std::string response;
-    Status status = adb_->ForceStop(serial_, active_package_);
-    if (status.IsError())
-      return status;
-    active_package_ = "";
-  }
-  return Status(kOk);
-}
-
-
-Status Device::TearDownTizenApp() {
-  if (!active_tizen_app_.empty()) {
-    std::string response;
-    Status status = adb_->ForceStopTizenApp(serial_, active_tizen_app_);
-    if (status.IsError())
-      return status;
-    active_tizen_app_ = "";
-  }
-  return Status(kOk);
-}
-
-DeviceManager::DeviceManager(Adb* adb) : adb_(adb) {
-  CHECK(adb_);
+DeviceManager::DeviceManager(
+    DeviceBridge* device_bridge) : device_bridge_(device_bridge) {
+  CHECK(device_bridge_);
 }
 
 DeviceManager::~DeviceManager() {}
 
 Status DeviceManager::AcquireDevice(scoped_ptr<Device>* device) {
   std::vector<std::string> devices;
-  Status status = adb_->GetDevices(&devices);
+  Status status = device_bridge_->GetDevices(&devices);
   if (status.IsError())
     return status;
 
@@ -181,7 +58,7 @@ Status DeviceManager::AcquireDevice(scoped_ptr<Device>* device) {
 Status DeviceManager::AcquireSpecificDevice(
     const std::string& device_serial, scoped_ptr<Device>* device) {
   std::vector<std::string> devices;
-  Status status = adb_->GetDevices(&devices);
+  Status status = device_bridge_->GetDevices(&devices);
   if (status.IsError())
     return status;
 
@@ -211,9 +88,17 @@ void DeviceManager::ReleaseDevice(const std::string& device_serial) {
 
 Device* DeviceManager::LockDevice(const std::string& device_serial) {
   active_devices_.push_back(device_serial);
-  return new Device(device_serial, adb_,
-      base::Bind(&DeviceManager::ReleaseDevice, base::Unretained(this),
-                 device_serial));
+  std::string os_name = base::StringToLowerASCII(
+                            device_bridge_->GetOperatingSystemName());
+
+  if (os_name.find("android") != std::string::npos)
+    return new AndroidDevice(device_serial, device_bridge_,
+        base::Bind(&DeviceManager::ReleaseDevice, base::Unretained(this),
+                   device_serial));
+  else
+    return new TizenDevice(device_serial, device_bridge_,
+        base::Bind(&DeviceManager::ReleaseDevice, base::Unretained(this),
+                   device_serial));
 }
 
 bool DeviceManager::IsDeviceLocked(const std::string& device_serial) {

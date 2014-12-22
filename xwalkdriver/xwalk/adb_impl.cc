@@ -17,8 +17,8 @@
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/time/time.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/net/adb_client_socket.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
 
 namespace {
 
@@ -97,7 +97,8 @@ Status AdbImpl::GetDevices(std::vector<std::string>* devices) {
 }
 
 Status AdbImpl::ForwardPort(
-    const std::string& device_serial, int local_port,
+    const std::string& device_serial, 
+    int local_port,
     const std::string& remote_abstract) {
   std::string response;
   Status status = ExecuteHostCommand(
@@ -113,26 +114,11 @@ Status AdbImpl::ForwardPort(
                 device_serial + ": " + response);
 }
 
-Status AdbImpl::ForwardTizenPort(
-    const std::string& device_serial, int local_port,
-    int remote_port) {
-  std::string response;
-  Status status = ExecuteHostCommand(
-      device_serial,
-      "forward:tcp:" + base::IntToString(local_port) + ";tcp:" +
-      base::IntToString(remote_port),
-      &response);
-  if (!status.IsOk())
-    return status;
-  if (response == "OKAY")
-    return Status(kOk);
-  return Status(kUnknownError, response);
-}
-
-Status AdbImpl::SetCommandLineFile(const std::string& device_serial,
-                                   const std::string& command_line_file,
-                                   const std::string& exec_name,
-                                   const std::string& args) {
+Status AdbImpl::SetCommandLineFile(
+    const std::string& device_serial,
+    const std::string& command_line_file,
+    const std::string& exec_name,
+    const std::string& args) {
   std::string response;
   std::string quoted_command =
       base::GetQuotedJSONString(exec_name + " " + args);
@@ -151,7 +137,8 @@ Status AdbImpl::SetCommandLineFile(const std::string& device_serial,
 }
 
 Status AdbImpl::CheckAppInstalled(
-    const std::string& device_serial, const std::string& package) {
+    const std::string& device_serial, 
+    const std::string& package) {
   std::string response;
   std::string command = "pm path " + package;
   Status status = ExecuteHostShellCommand(device_serial, command, &response);
@@ -163,22 +150,9 @@ Status AdbImpl::CheckAppInstalled(
   return Status(kOk);
 }
 
-Status AdbImpl::CheckTizenAppInstalled(
-    const std::string& device_serial, const std::string& app_id) {
-  std::string response;
-  std::string app_launcher_cmd = "su - app -c \"app_launcher -l\"";
-
-  Status status = ExecuteHostShellCommand(device_serial, app_launcher_cmd, &response);
-  printf (">>>>>>>> AdbImpl::CheckInstall %s \n", status.message().c_str());
- 
-  if (response.find(app_id) == std::string::npos)
-    return Status(kUnknownError, app_id + " is not installed on device " +
-                  device_serial);
-  return Status(kOk);
-}
-
 Status AdbImpl::ClearAppData(
-    const std::string& device_serial, const std::string& package) {
+    const std::string& device_serial, 
+    const std::string& package) {
   std::string response;
   std::string command = "pm clear " + package;
   Status status = ExecuteHostShellCommand(device_serial, command, &response);
@@ -191,85 +165,42 @@ Status AdbImpl::ClearAppData(
 }
 
 Status AdbImpl::SetDebugApp(
-    const std::string& device_serial, const std::string& package) {
+    const std::string& device_serial, 
+    const std::string& package) {
   std::string response;
   return ExecuteHostShellCommand(
       device_serial, "am set-debug-app --persistent " + package, &response);
 }
 
 Status AdbImpl::Launch(
-    const std::string& device_serial, const std::string& package,
-    const std::string& activity) {
+    const std::string& device_serial,
+    const std::string& app_id) {
   std::string response;
   Status status = ExecuteHostShellCommand(
       device_serial,
-      "am start -W -n " + package + "/" + activity + " -d data:,",
+      "am start -W -n " + app_id + " -d data:,",
       &response);
   if (!status.IsOk())
     return status;
   if (response.find("Complete") == std::string::npos)
     return Status(kUnknownError,
-                  "Failed to start " + package + " on device " + device_serial +
+                  "Failed to start " + app_id + " on device " + device_serial +
                   ": " + response);
   return Status(kOk);
 }
 
-
-Status AdbImpl::LaunchTizenApp(
-    const std::string& device_serial,
-    const std::string& app_id) {
-  Status status(kOk);
-  // when re-launch tizen app by invoking app_launcher on tizen, the app
-  // is an old process, so we need to kill it first.
-  if (IsTizenAppRunning(device_serial, app_id))
-    status = ForceStopTizenApp(device_serial, app_id);
-
-  if (status.IsError())
-    return Status(kUnknownError, 
-                  "Failed to re-launch " + app_id + " on device " + device_serial);
-
-  std::string response;
-  std::string app_launcher_cmd = "su - app -c \" "\
-                              "app_launcher -s " + app_id + " -d \"";
-
-  status = ExecuteHostShellCommand(device_serial, app_launcher_cmd, &response);
-
-  printf (">>>>>>>> AdbImpl::launched \n");
-  if (status.IsError())
-    printf("Launch failed %s \n", response.c_str());
-
-  return status;
-}
-
 Status AdbImpl::ForceStop(
-    const std::string& device_serial, const std::string& package) {
+    const std::string& device_serial, 
+    const std::string& package) {
   std::string response;
   return ExecuteHostShellCommand(
       device_serial, "am force-stop " + package, &response);
 }
 
-Status AdbImpl::ForceStopTizenApp(
-    const std::string& device_serial, const std::string& app_id) {
-  std::string response;
-  std::string app_launcher_cmd = "su - app -c \" "\
-                      "app_launcher -k " + app_id + " \"";
-  return  ExecuteHostShellCommand(device_serial, app_launcher_cmd, &response);
-}
-
-bool AdbImpl::IsTizenAppRunning(
+Status AdbImpl::GetPidByName(
     const std::string& device_serial,
-    const std::string& app_id) {
-  std::string  response;
-  std::string app_launcher_cmd = "su - app -c \"app_launcher -S\"";
-
-  Status status = ExecuteHostShellCommand(device_serial, app_launcher_cmd, &response);
-
-  return (response.find(app_id) != std::string::npos);
-}
-
-Status AdbImpl::GetPidByName(const std::string& device_serial,
-                             const std::string& process_name,
-                             int* pid) {
+    const std::string& process_name,
+    int* pid) {
   std::string response;
   Status status = ExecuteHostShellCommand(device_serial, "ps", &response);
   if (!status.IsOk())
@@ -298,8 +229,13 @@ Status AdbImpl::GetPidByName(const std::string& device_serial,
                 "Failed to get PID for the following process: " + process_name);
 }
 
+std::string AdbImpl::GetOperatingSystemName() {
+  return "Android";
+}
+
 Status AdbImpl::ExecuteCommand(
-    const std::string& command, std::string* response) {
+    const std::string& command, 
+    std::string* response) {
   scoped_refptr<ResponseBuffer> response_buffer = new ResponseBuffer;
   VLOG(1) << "Sending adb command: " << command;
   io_task_runner_->PostTask(
@@ -320,7 +256,8 @@ Status AdbImpl::ExecuteCommand(
 
 Status AdbImpl::ExecuteHostCommand(
     const std::string& device_serial,
-    const std::string& host_command, std::string* response) {
+    const std::string& host_command, 
+    std::string* response) {
   return ExecuteCommand(
       "host-serial:" + device_serial + ":" + host_command, response);
 }
