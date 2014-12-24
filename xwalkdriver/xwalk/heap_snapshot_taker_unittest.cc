@@ -59,7 +59,7 @@ class DummyDevToolsClient : public StubDevToolsClient {
 
   // Overridden from DevToolsClient:
   virtual Status SendCommand(const std::string& method,
-                             const base::DictionaryValue& params) OVERRIDE {
+                             const base::DictionaryValue& params) override {
     if (!cleared_)
       cleared_ = method == "HeapProfiler.clearProfiles";
     if (!disabled_)
@@ -155,7 +155,7 @@ class TwoUidEventClient : public DummyDevToolsClient {
   virtual ~TwoUidEventClient() {}
 
   // Overridden from DummyDevToolsClient:
-  virtual Status SendAddProfileHeaderEvent() OVERRIDE {
+  virtual Status SendAddProfileHeaderEvent() override {
     Status status = DummyDevToolsClient::SendAddProfileHeaderEvent();
     if (status.IsError())
       return status;
@@ -187,7 +187,7 @@ class ChunkWithDifferentUidClient : public DummyDevToolsClient {
   virtual ~ChunkWithDifferentUidClient() {}
 
   // Overridden from DummyDevToolsClient:
-  virtual Status SendAddHeapSnapshotChunkEvent() OVERRIDE {
+  virtual Status SendAddHeapSnapshotChunkEvent() override {
     Status status = DummyDevToolsClient::SendAddHeapSnapshotChunkEvent();
     if (status.IsError())
       return status;

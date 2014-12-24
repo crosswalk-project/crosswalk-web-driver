@@ -10,10 +10,15 @@
 #include "base/base_paths.h"
 #include "base/bind.h"
 #include "base/callback.h"
-#include "base/file_util.h"
 #include "base/files/file_path.h"
+#include "base/files/file_util.h"
 #include "base/path_service.h"
 #include "build/build_config.h"
+
+#if defined(OS_WIN)
+#include "base/base_paths_win.h"
+#include "base/win/windows_version.h"
+#endif
 
 namespace {
 

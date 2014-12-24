@@ -217,27 +217,6 @@ Status ParseUseExistingBrowser(const base::Value& option,
   return Status(kOk);
 }
 
-Status ParseTizenXwalk(const base::Value& option,
-                               Capabilities* capabilities) {
-  std::string server_addr;
-  if (!option.GetAsString(&server_addr))
-    return Status(kUnknownError, "must be 'host:port'");
-
-  std::vector<std::string> values;
-  base::SplitString(server_addr, ':', &values);
-  if (values.size() != 2)
-    return Status(kUnknownError, "must be 'host:port'");
-
-  int port = 0;
-  base::StringToInt(values[1], &port);
-  if (port <= 0)
-    return Status(kUnknownError, "port must be > 0");
-
-  capabilities->tizen_debugger_address = NetAddress(values[0], port);
-  return Status(kOk);
-}
-
-
 Status ParseLoggingPrefs(const base::Value& option,
                          Capabilities* capabilities) {
   const base::DictionaryValue* logging_prefs = NULL;
@@ -266,8 +245,8 @@ Status ParseXwalkOptions(
     return Status(kUnknownError, "must be a dictionary");
 
   bool is_android = xwalk_options->HasKey("androidPackage");
+  bool is_tizen = xwalk_options->HasKey("tizenAppId");
   bool is_existing = xwalk_options->HasKey("debuggerAddress");
-  bool is_tizen = xwalk_options->HasKey("tizenDebuggerAddress");
 
   std::map<std::string, Parser> parser_map;
   // Ignore 'args', 'binary' and 'extensions' capabilities by default, since the
@@ -279,25 +258,17 @@ Status ParseXwalkOptions(
     parser_map["androidActivity"] =
         base::Bind(&ParseString, &capabilities->android_activity);
     parser_map["androidDeviceSerial"] =
-        base::Bind(&ParseString, &capabilities->android_device_serial);
+        base::Bind(&ParseString, &capabilities->device_serial);
     parser_map["androidPackage"] =
         base::Bind(&ParseString, &capabilities->android_package);
-    parser_map["androidProcess"] =
-        base::Bind(&ParseString, &capabilities->android_process);
-    parser_map["androidUseRunningApp"] =
-        base::Bind(&ParseBoolean, &capabilities->android_use_running_app);
     parser_map["args"] = base::Bind(&ParseSwitches);
     parser_map["loadAsync"] = base::Bind(&IgnoreDeprecatedOption, "loadAsync");
   } else if (is_tizen) {
-    parser_map["tizenDebuggerAddress"] = base::Bind(&ParseTizenXwalk);
+    parser_map["tizenDebuggerAddress"] = base::Bind(&ParseUseExistingBrowser);
     parser_map["tizenAppId"] =
         base::Bind(&ParseString, &capabilities->tizen_app_id);
-    parser_map["tizenAppName"] =
-        base::Bind(&ParseString, &capabilities->tizen_app_name);
     parser_map["tizenDeviceSerial"] =
-        base::Bind(&ParseString, &capabilities->tizen_device_serial);
-    parser_map["tizenUseRunningApp"] =
-        base::Bind(&ParseBoolean, &capabilities->tizen_use_running_app);
+        base::Bind(&ParseString, &capabilities->device_serial);
   } else if (is_existing) {
     parser_map["debuggerAddress"] = base::Bind(&ParseUseExistingBrowser);
   } else {
@@ -440,9 +411,7 @@ std::string Switches::ToString() const {
 }
 
 Capabilities::Capabilities()
-    : android_use_running_app(false),
-      tizen_use_running_app(false),
-      detach(false),
+    : detach(false),
       force_devtools_screenshot(false) {}
 
 Capabilities::~Capabilities() {}
@@ -452,11 +421,11 @@ bool Capabilities::IsAndroid() const {
 }
 
 bool Capabilities::IsExistingBrowser() const {
-  return debugger_address.IsValid();
+  return !IsAndroid() && !IsTizen() && debugger_address.IsValid();
 }
 
 bool Capabilities::IsTizen() const {
-  return tizen_debugger_address.IsValid();
+  return !tizen_app_id.empty();
 }
 
 Status Capabilities::Parse(const base::DictionaryValue& desired_caps) {

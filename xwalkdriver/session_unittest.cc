@@ -20,7 +20,7 @@ class MockXwalk : public StubXwalk {
   virtual ~MockXwalk() {}
 
   virtual Status GetWebViewById(const std::string& id,
-                                WebView** web_view) OVERRIDE {
+                                WebView** web_view) override {
     if (id == web_view_.GetId()) {
       *web_view = &web_view_;
       return Status(kOk);

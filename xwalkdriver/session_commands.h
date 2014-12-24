@@ -154,4 +154,9 @@ Status ExecuteUploadFile(
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value);
 
+Status ExecuteGetBrowserOrientation(
+    Session* session,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value);
+
 #endif  // XWALK_TEST_XWALKDRIVER_SESSION_COMMANDS_H_

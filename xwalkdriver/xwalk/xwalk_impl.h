@@ -27,16 +27,16 @@ class XwalkImpl : public Xwalk {
   virtual ~XwalkImpl();
 
   // Overridden from Xwalk:
-  virtual std::string GetVersion() OVERRIDE;
-  virtual XwalkDesktopImpl* GetAsDesktop() OVERRIDE;
-  virtual int GetBuildNo() OVERRIDE;
-  virtual bool HasCrashedWebView() OVERRIDE;
-  virtual Status GetWebViewIds(std::list<std::string>* web_view_ids) OVERRIDE;
+  virtual std::string GetVersion() override;
+  virtual XwalkDesktopImpl* GetAsDesktop() override;
+  virtual int GetBuildNo() override;
+  virtual bool HasCrashedWebView() override;
+  virtual Status GetWebViewIds(std::list<std::string>* web_view_ids) override;
   virtual Status GetWebViewById(const std::string& id,
-                                WebView** web_view) OVERRIDE;
-  virtual Status CloseWebView(const std::string& id) OVERRIDE;
-  virtual Status ActivateWebView(const std::string& id) OVERRIDE;
-  virtual Status Quit() OVERRIDE;
+                                WebView** web_view) override;
+  virtual Status CloseWebView(const std::string& id) override;
+  virtual Status ActivateWebView(const std::string& id) override;
+  virtual Status Quit() override;
 
  protected:
   XwalkImpl(

@@ -11,8 +11,9 @@
 #include "base/base64.h"
 #include "base/basictypes.h"
 #include "base/command_line.h"
-#include "base/file_util.h"
 #include "base/files/file_path.h"
+#include "base/files/file_util.h"
+#include "base/files/scoped_file.h"
 #include "base/format_macros.h"
 #include "base/json/json_reader.h"
 #include "base/json/json_writer.h"
@@ -261,11 +262,11 @@ Status LaunchAndroidXwalk(
     scoped_ptr<Xwalk>* xwalk) {
   Status status(kOk);
   scoped_ptr<Device> device;
-  if (capabilities.android_device_serial.empty()) {
+  if (capabilities.device_serial.empty()) {
     status = device_manager->AcquireDevice(&device);
   } else {
     status = device_manager->AcquireSpecificDevice(
-        capabilities.android_device_serial, &device);
+        capabilities.device_serial, &device);
   }
   if (status.IsError()) {
     return status;
@@ -323,22 +324,21 @@ Status LaunchTizenXwalk(
   scoped_ptr<Device> device;
   // In real tizen device, its device serial is always same as its
   // net address.
-  if (capabilities.tizen_device_serial.empty() && 
-      capabilities.tizen_debugger_address.host().empty()) {
+  if (capabilities.device_serial.empty() && 
+      capabilities.debugger_address.host().empty()) {
     status = device_manager->AcquireDevice(&device);
-  } else if (!capabilities.tizen_device_serial.empty()) {
+  } else if (!capabilities.device_serial.empty()) {
     status = device_manager->AcquireSpecificDevice(
-        capabilities.tizen_device_serial, &device);
+        capabilities.device_serial, &device);
   } else {
     status = device_manager->AcquireSpecificDevice(
-        capabilities.tizen_debugger_address.host(), &device);
+        capabilities.debugger_address.host(), &device);
   }
 
   if(status.IsError()) {
-    printf("AcquireDevice error! \n");
     return status;
   }
-  int remote_port = capabilities.tizen_debugger_address.port();
+  int remote_port = capabilities.debugger_address.port();
   Switches switches;
   status = device->SetUp(capabilities.tizen_app_id,
                                  switches.ToString(),
