@@ -9,7 +9,7 @@
 
 #include "base/bind.h"
 #include "base/callback.h"
-#include "base/file_util.h"
+#include "base/files/file_util.h"
 #include "base/logging.h"  // For CHECK macros.
 #include "base/memory/ref_counted.h"
 #include "base/message_loop/message_loop_proxy.h"
@@ -580,5 +580,39 @@ Status ExecuteUploadFile(
     return Status(kUnknownError, "unable to unzip 'file'", status);
 
   value->reset(new base::StringValue(upload.value()));
+  return Status(kOk);
+}
+
+Status ExecuteGetBrowserOrientation(
+    Session* session,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value) {
+  WebView* web_view = nullptr;
+  Status status = session->GetTargetWindow(&web_view);
+  if (status.IsError())
+    return status;
+
+  status = web_view->ConnectIfNecessary();
+  if (status.IsError())
+    return status;
+
+  base::ListValue args;
+  scoped_ptr<base::Value> result;
+  const char* kGetBrowserOrientationScript =
+      "function() { return window.screen.orientation;}";
+
+  status = web_view->CallFunction(session->GetCurrentFrameId(),
+      kGetBrowserOrientationScript, args, &result);
+  if (status.IsError())
+    return status;
+
+  std::string orientation;
+  base::DictionaryValue* dict_value;
+
+  if (!result->GetAsDictionary(&dict_value) ||
+      !dict_value->GetString("type", &orientation))
+    return Status(kUnknownError, "failed to get browser orientation");
+
+  value->reset(new base::StringValue(orientation));
   return Status(kOk);
 }

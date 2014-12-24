@@ -40,11 +40,11 @@ class XwalkDesktopImpl : public XwalkImpl {
                            scoped_ptr<WebView>* web_view);
 
   // Overridden from Xwalk
-  virtual XwalkDesktopImpl* GetAsDesktop() OVERRIDE;
-  virtual std::string GetOperatingSystemName() OVERRIDE;
+  virtual XwalkDesktopImpl* GetAsDesktop() override;
+  virtual std::string GetOperatingSystemName() override;
 
   // Overridden from XwalkImpl:
-  virtual Status QuitImpl() OVERRIDE;
+  virtual Status QuitImpl() override;
 
   const CommandLine& command() const;
 

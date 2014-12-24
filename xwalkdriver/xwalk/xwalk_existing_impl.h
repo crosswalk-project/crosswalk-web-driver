@@ -21,10 +21,10 @@ class XwalkExistingImpl : public XwalkImpl {
   virtual ~XwalkExistingImpl();
 
   // Overridden from Xwalk.
-  virtual std::string GetOperatingSystemName() OVERRIDE;
+  virtual std::string GetOperatingSystemName() override;
 
   // Overridden from XwalkImpl.
-  virtual Status QuitImpl() OVERRIDE;
+  virtual Status QuitImpl() override;
 };
 
 #endif  // XWALK_TEST_XWALKDRIVER_XWALK_XWALK_EXISTING_IMPL_H_

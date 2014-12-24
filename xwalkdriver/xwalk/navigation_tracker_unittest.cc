@@ -148,7 +148,7 @@ class FailToEvalScriptDevToolsClient : public StubDevToolsClient {
   virtual Status SendCommandAndGetResult(
       const std::string& method,
       const base::DictionaryValue& params,
-      scoped_ptr<base::DictionaryValue>* result) OVERRIDE {
+      scoped_ptr<base::DictionaryValue>* result) override {
     EXPECT_STREQ("Runtime.evaluate", method.c_str());
     return Status(kUnknownError, "failed to eval script");
   }
@@ -181,7 +181,7 @@ class DeterminingLoadStateDevToolsClient : public StubDevToolsClient {
   virtual Status SendCommandAndGetResult(
       const std::string& method,
       const base::DictionaryValue& params,
-      scoped_ptr<base::DictionaryValue>* result) OVERRIDE {
+      scoped_ptr<base::DictionaryValue>* result) override {
     if (send_event_first_.length()) {
       Status status = listeners_.front()
           ->OnEvent(this, send_event_first_, *send_event_first_params_);

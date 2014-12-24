@@ -51,7 +51,7 @@ scoped_ptr<base::Value> SmartDeepCopy(const base::Value* value) {
       dict_copy->SetWithoutPathExpansion(it.key(),
                                          SmartDeepCopy(child).release());
     }
-    return dict_copy.PassAs<base::Value>();
+    return dict_copy.Pass();
   } else if (value->GetAsList(&list)) {
     scoped_ptr<base::ListValue> list_copy(new base::ListValue());
     for (size_t i = 0; i < list->GetSize(); ++i) {
@@ -64,7 +64,7 @@ scoped_ptr<base::Value> SmartDeepCopy(const base::Value* value) {
       }
       list_copy->Append(SmartDeepCopy(child).release());
     }
-    return list_copy.PassAs<base::Value>();
+    return list_copy.Pass();
   } else if (value->GetAsString(&data)) {
     TruncateString(&data);
     return scoped_ptr<base::Value>(new base::StringValue(data));
@@ -89,7 +89,7 @@ std::string PrettyPrintValue(const base::Value& value) {
   base::JSONWriter::WriteWithOptions(
       &value, base::JSONWriter::OPTIONS_PRETTY_PRINT, &json);
 #if defined(OS_WIN)
-  RemoveChars(json, "\r", &json);
+  base::RemoveChars(json, "\r", &json);
 #endif
   // Remove the trailing newline.
   if (json.length())

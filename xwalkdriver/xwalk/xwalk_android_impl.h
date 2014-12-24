@@ -24,10 +24,10 @@ class XwalkAndroidImpl : public XwalkImpl {
   virtual ~XwalkAndroidImpl();
 
   // Overridden from Xwalk
-  virtual std::string GetOperatingSystemName() OVERRIDE;
+  virtual std::string GetOperatingSystemName() override;
 
   // Overridden from XwalkImpl:
-  virtual Status QuitImpl() OVERRIDE;
+  virtual Status QuitImpl() override;
 
  private:
   scoped_ptr<Device> device_;

@@ -50,7 +50,7 @@ class DetachXwalk : public StubXwalk {
   virtual ~DetachXwalk() {}
 
   // Overridden from Xwalk:
-  virtual Status Quit() OVERRIDE {
+  virtual Status Quit() override {
     quit_called_ = true;
     return Status(kOk);
   }
@@ -98,7 +98,7 @@ class FailsToQuitXwalk : public StubXwalk {
   virtual ~FailsToQuitXwalk() {}
 
   // Overridden from Xwalk:
-  virtual Status Quit() OVERRIDE {
+  virtual Status Quit() override {
     return Status(kUnknownError);
   }
 };

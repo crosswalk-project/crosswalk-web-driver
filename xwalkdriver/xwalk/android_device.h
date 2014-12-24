@@ -26,9 +26,9 @@ class AndroidDevice : public Device{
   virtual Status SetUp(const std::string& app_id,
                        const std::string& args,
                        int local_port,
-                       int remote_port) OVERRIDE;
+                       int remote_port) override;
 
-  virtual Status TearDown() OVERRIDE;
+  virtual Status TearDown() override;
 
  private:
   friend class DeviceManager;

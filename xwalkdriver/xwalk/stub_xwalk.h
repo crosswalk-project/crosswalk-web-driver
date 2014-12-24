@@ -20,17 +20,17 @@ class StubXwalk : public Xwalk {
   virtual ~StubXwalk();
 
   // Overridden from Xwalk:
-  virtual XwalkDesktopImpl* GetAsDesktop() OVERRIDE;
-  virtual std::string GetVersion() OVERRIDE;
-  virtual int GetBuildNo() OVERRIDE;
-  virtual bool HasCrashedWebView() OVERRIDE;
-  virtual Status GetWebViewIds(std::list<std::string>* web_view_ids) OVERRIDE;
+  virtual XwalkDesktopImpl* GetAsDesktop() override;
+  virtual std::string GetVersion() override;
+  virtual int GetBuildNo() override;
+  virtual bool HasCrashedWebView() override;
+  virtual Status GetWebViewIds(std::list<std::string>* web_view_ids) override;
   virtual Status GetWebViewById(const std::string& id,
-                                WebView** web_view) OVERRIDE;
-  virtual Status CloseWebView(const std::string& id) OVERRIDE;
-  virtual Status ActivateWebView(const std::string& id) OVERRIDE;
-  virtual std::string GetOperatingSystemName() OVERRIDE;
-  virtual Status Quit() OVERRIDE;
+                                WebView** web_view) override;
+  virtual Status CloseWebView(const std::string& id) override;
+  virtual Status ActivateWebView(const std::string& id) override;
+  virtual std::string GetOperatingSystemName() override;
+  virtual Status Quit() override;
 };
 
 #endif  // XWALK_TEST_XWALKDRIVER_XWALK_STUB_XWALK_H_

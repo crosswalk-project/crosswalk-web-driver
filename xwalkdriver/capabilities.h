@@ -69,30 +69,20 @@ struct Capabilities {
   // Return true if android package is specified.
   bool IsAndroid() const;
 
+  // Return true if tizen app id is specified.
+  bool IsTizen() const;
+
   Status Parse(const base::DictionaryValue& desired_caps);
 
+  // Platform specific features
   std::string android_activity;
-
-  std::string android_device_serial;
 
   std::string android_package;
 
-  std::string android_process;
-
-  bool android_use_running_app;
-
-  // Return true if tizen package is specified.
-  bool IsTizen() const;
-
-  NetAddress tizen_debugger_address;
-
   std::string tizen_app_id;
 
-  std::string tizen_app_name;
-
-  std::string tizen_device_serial;
-
-  bool tizen_use_running_app;
+  // Target device serial
+  std::string device_serial;
 
   base::FilePath binary;
 
