@@ -300,6 +300,10 @@ HttpHandler::HttpHandler(
                      WrapToCommand("DeleteAllCookies",
                                    base::Bind(&ExecuteDeleteAllCookies))),
       CommandMapping(
+          kGet,
+          "session/:sessionId/cookie/:name",
+          WrapToCommand("GetCookie", base::Bind(&ExecuteGetCookie))),
+      CommandMapping(
           kDelete,
           "session/:sessionId/cookie/:name",
           WrapToCommand("DeleteCookie", base::Bind(&ExecuteDeleteCookie))),

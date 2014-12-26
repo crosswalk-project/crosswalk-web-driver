@@ -248,6 +248,13 @@ Status ExecuteScreenshot(
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value);
 
+// Retrieve specific cookie visible to the current page by name.
+Status ExecuteGetCookie(
+    Session* session,
+    WebView* web_view,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value);
+
 // Retrieve all cookies visible to the current page.
 Status ExecuteGetCookies(
     Session* session,
