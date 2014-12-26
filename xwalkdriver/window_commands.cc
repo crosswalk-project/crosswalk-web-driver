@@ -736,7 +736,6 @@ Status ExecuteScreenshot(
     scoped_ptr<base::Value>* value) {
   Status status = session->xwalk->ActivateWebView(web_view->GetId());
   if (status.IsError()){
-    //return status;
     printf("The Crosswalk WebView Activate Status is \"%s\"\n",
                                            status.message().c_str());
   }
@@ -747,6 +746,30 @@ Status ExecuteScreenshot(
 
   value->reset(new base::StringValue(screenshot));
   return Status(kOk);
+}
+
+Status ExecuteGetCookie(
+    Session* session,
+    WebView* web_view,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value) {
+  std::string name;
+  if (!params.GetString("name", &name))
+    return Status(kUnknownError, "missing 'name'");
+  std::list<Cookie> cookies;
+  Status status = GetVisibleCookies(web_view, &cookies);
+  if (status.IsError())
+    return status;
+
+  for (std::list<Cookie>::const_iterator it = cookies.begin();
+       it != cookies.end(); ++it) {
+    if (name.compare(it->name) == 0u) {
+      value->reset(CreateDictionaryFrom(*it));
+      return Status(kOk);
+    }
+  }
+  return Status(kUnknownError,
+      "desired cookie: " + name + " doesn't exist.");
 }
 
 Status ExecuteGetCookies(
