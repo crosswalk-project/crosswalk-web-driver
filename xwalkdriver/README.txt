@@ -26,31 +26,26 @@ $ python
 For Android xwalk:
 
 (1) Build XwalkDriver by building the 'xwalkdriver' target and get an executable
-binary in the build folder named 'xwalkdriver'. Or download the binary from
-    https://github.com/iKevinHan/xwalkdriver_binary 
+binary in the build folder named 'xwalkdriver'(Details referred to ../README.md).
+Or download the binary from
+    https://github.com/crosswalk-project/crosswalk-web-driver/bin
 
+(2) Pakage your app by execute command
+    python make_apk.py --package=YOUR_APP_PACKAGE_NAME --manifest=YOUR_APP_PATH/manifest.json \
+      --arch=YOUR_DEVICE_ARCH --enable-remote-debugging
 
-(2) Enable remote debugging in your Android app source code, like this  
+(3) Install your apk to device.
 
-    public void onCreate(Bundle savedInstanceState) {
-        ...
-        setRemoteDebugging(true); // Enable remote debugging
-        super.onCreate(savedInstanceState);
-        ...
-    }
-
-(3) Pakage your app by execute command
-    python make_apk.py --package=YOUR_APP_PACKAGE_NAME --manifest=YOUR_APP_PATH/manifest.json --arch=YOUR_DEVICE_ARCH
-
-(4) Install your apk to device.
-
-(5) Install Selenium package by executing command in sudo mode
+(4) Install Selenium package by executing command in sudo mode
     apt-get install python-pip && pip install selenium
 
-(6) Run xwalkdriver binary.
+(5) Run xwalkdriver binary.
     $./xwalkdriver
+    If xwalkdriver runs on a remote server, you can authorize security clients on where
+test suit executes by white-list-ip like this.
+    $./xwalkdriver --whitelisted-ips=client-ip;
 
-(7) Execute following commands to test:
+(6) Execute following commands to test:
 $ python
 >>> from selenium import webdriver
 >>>
@@ -58,12 +53,12 @@ capabilities = {
   'xwalkOptions': {
     'androidPackage': 'YOUR_PACKAGE_NAME', 
     'androidActivity': '.YOUR_ACTIVITY_NAME',
+    'adb-port': 5037(default option if not selected),
   }
 }
 >>> driver = webdriver.Remote('http://localhost:9515', capabilities)      
 >>> driver.save_screenshot("screenshot.png")
->>> driver.execute_script("alert('aaaa')")
-
+>>> driver.quit()
 
     
 For Tizen xwalk:
@@ -91,7 +86,10 @@ systemctl --user restart xwalk
     apt-get install python-pip && pip install selenium
 
 (7) Run xwalkdriver binary on PC with command:
-    $./xwalkdriver --sdb-port=26099
+    $./xwalkdriver
+    If xwalkdriver runs on a remote server, you can authorize security clients on where
+test suit executes by white-list-ip like this.
+    $./xwalkdriver --whitelisted-ips=client-ip;
 
 (8) Execute following commands to test(Note to replace your tizen application Id):
 $ python
@@ -101,6 +99,7 @@ capabilities = {
   'xwalkOptions': {
     'tizenDebuggerAddress': '10.238.158.97:9333',
     'tizenAppId': 'xwalk.ihogjblnkegkonaaaddobhoncmdpbomi',
+    'sdb-port': 26099(default option if not selected),
   }
 }
 

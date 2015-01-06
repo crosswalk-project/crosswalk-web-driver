@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include "base/values.h"
+#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/capabilities.h"
+#include "xwalk/test/xwalkdriver/logging.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_event_listener.h"
 #include "xwalk/test/xwalkdriver/xwalk/log.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/logging.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
 

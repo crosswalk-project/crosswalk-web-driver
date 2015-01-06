@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_existing_impl.h"
+
+#include "xwalk/test/xwalkdriver/net/port_server.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_http_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/net/port_server.h"
 
 XwalkExistingImpl::XwalkExistingImpl(
     scoped_ptr<DevToolsHttpClient> client,

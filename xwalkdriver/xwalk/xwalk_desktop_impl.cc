@@ -18,11 +18,11 @@
 #include "base/sys_info.h"
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
+#include "xwalk/test/xwalkdriver/net/port_server.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_http_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view_impl.h"
-#include "xwalk/test/xwalkdriver/net/port_server.h"
 
 namespace {
 

@@ -6,11 +6,11 @@
 
 #include "base/strings/string16.h"
 #include "base/strings/utf_string_conversions.h"
-#include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
-#include "xwalk/test/xwalkdriver/keycode_text_conversion.h"
-#include "xwalk/test/xwalkdriver/test_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "ui/events/keycodes/keyboard_codes.h"
+#include "xwalk/test/xwalkdriver/keycode_text_conversion.h"
+#include "xwalk/test/xwalkdriver/test_util.h"
+#include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
 
 namespace {
 

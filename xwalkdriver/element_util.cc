@@ -12,12 +12,12 @@
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
 #include "base/values.h"
+#include "third_party/webdriver/atoms.h"
 #include "xwalk/test/xwalkdriver/basic_types.h"
+#include "xwalk/test/xwalkdriver/session.h"
 #include "xwalk/test/xwalkdriver/xwalk/js.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view.h"
-#include "xwalk/test/xwalkdriver/session.h"
-#include "third_party/webdriver/atoms.h"
 
 namespace {
 

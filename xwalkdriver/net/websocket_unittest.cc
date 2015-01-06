@@ -16,11 +16,11 @@
 #include "base/single_thread_task_runner.h"
 #include "base/threading/thread.h"
 #include "base/time/time.h"
-#include "xwalk/test/xwalkdriver/net/test_http_server.h"
-#include "xwalk/test/xwalkdriver/net/websocket.h"
 #include "net/url_request/url_request_test_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "url/gurl.h"
+#include "xwalk/test/xwalkdriver/net/test_http_server.h"
+#include "xwalk/test/xwalkdriver/net/websocket.h"
 
 namespace {
 

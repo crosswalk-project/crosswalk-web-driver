@@ -17,20 +17,18 @@
 #include "base/strings/stringprintf.h"
 #include "base/sys_info.h"
 #include "base/values.h"
+#include "net/server/http_server_request_info.h"
+#include "net/server/http_server_response_info.h"
 #include "xwalk/test/xwalkdriver/alert_commands.h"
 #include "xwalk/test/xwalkdriver/capabilities.h"
-#include "xwalk/test/xwalkdriver/xwalk/adb_impl.h"
-#include "xwalk/test/xwalkdriver/xwalk/device_manager.h"
-#include "xwalk/test/xwalkdriver/xwalk/sdb_impl.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/net/port_server.h"
 #include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 #include "xwalk/test/xwalkdriver/session.h"
 #include "xwalk/test/xwalkdriver/session_thread_map.h"
 #include "xwalk/test/xwalkdriver/util.h"
 #include "xwalk/test/xwalkdriver/version.h"
-#include "net/server/http_server_request_info.h"
-#include "net/server/http_server_response_info.h"
+#include "xwalk/test/xwalkdriver/xwalk/device_manager.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
 
 #if defined(OS_MACOSX)
 #include "base/mac/scoped_nsautorelease_pool.h"
@@ -68,8 +66,6 @@ HttpHandler::HttpHandler(
     const base::Closure& quit_func,
     const scoped_refptr<base::SingleThreadTaskRunner> io_task_runner,
     const std::string& url_base,
-    int adb_port,
-    int sdb_port,
     scoped_ptr<PortServer> port_server)
     : quit_func_(quit_func),
       url_base_(url_base),
@@ -78,19 +74,16 @@ HttpHandler::HttpHandler(
 #if defined(OS_MACOSX)
   base::mac::ScopedNSAutoreleasePool autorelease_pool;
 #endif
+
   context_getter_ = new URLRequestContextGetter(io_task_runner);
   socket_factory_ = CreateSyncWebSocketFactory(context_getter_.get());
-
-  if (adb_port) {
-    device_bridge_.reset(new AdbImpl(io_task_runner, adb_port));
-  } else if (sdb_port) {
-    device_bridge_.reset(new SdbImpl(io_task_runner, sdb_port));
-  }
-
-  device_manager_.reset(new DeviceManager(device_bridge_.get()));
   port_server_ = port_server.Pass();
   port_manager_.reset(new PortManager(12000, 13000));
 
+  // Defer the initialization of device_manager_ when hits "ExecuteInitSession"
+  // on http requests. It's invoked by reset to specific DeviceManager after
+  // parsing desired capabilities other than redundancy command line switches.
+  // The lifecycle of device_manager_ sync with HttpHandler.
   CommandMapping commands[] = {
       CommandMapping(
           kPost,
@@ -102,7 +95,7 @@ HttpHandler::HttpHandler(
                          base::Bind(&ExecuteInitSession,
                                     InitSessionParams(context_getter_,
                                                       socket_factory_,
-                                                      device_manager_.get(),
+                                                      &device_manager_,
                                                       port_server_.get(),
                                                       port_manager_.get()))))),
       CommandMapping(kGet,

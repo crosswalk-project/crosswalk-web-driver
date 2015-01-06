@@ -9,11 +9,11 @@
 #include "base/lazy_instance.h"
 #include "base/threading/thread_local.h"
 #include "base/values.h"
-#include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
+#include "xwalk/test/xwalkdriver/logging.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/version.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view.h"
-#include "xwalk/test/xwalkdriver/logging.h"
+#include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
 
 namespace {
 

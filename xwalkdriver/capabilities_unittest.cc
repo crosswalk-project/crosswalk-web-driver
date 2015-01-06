@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "xwalk/test/xwalkdriver/capabilities.h"
-
 #include "base/values.h"
+#include "testing/gtest/include/gtest/gtest.h"
+#include "xwalk/test/xwalkdriver/capabilities.h"
 #include "xwalk/test/xwalkdriver/xwalk/log.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 TEST(Switches, Empty) {
   Switches switches;

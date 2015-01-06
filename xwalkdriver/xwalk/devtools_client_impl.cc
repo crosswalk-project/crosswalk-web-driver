@@ -10,12 +10,12 @@
 #include "base/logging.h"
 #include "base/strings/stringprintf.h"
 #include "base/values.h"
+#include "xwalk/test/xwalkdriver/net/sync_websocket.h"
+#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_event_listener.h"
 #include "xwalk/test/xwalkdriver/xwalk/log.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/util.h"
-#include "xwalk/test/xwalkdriver/net/sync_websocket.h"
-#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 
 namespace {
 

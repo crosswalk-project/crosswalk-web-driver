@@ -6,12 +6,12 @@
 
 #include "base/callback.h"
 #include "base/values.h"
-#include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
+#include "xwalk/test/xwalkdriver/session.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/javascript_dialog_manager.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view.h"
-#include "xwalk/test/xwalkdriver/session.h"
+#include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
 
 Status ExecuteAlertCommand(
      const AlertCommand& alert_command,

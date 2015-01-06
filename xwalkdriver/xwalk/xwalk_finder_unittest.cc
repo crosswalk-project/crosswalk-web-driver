@@ -7,8 +7,8 @@
 
 #include "base/bind.h"
 #include "base/files/file_path.h"
-#include "xwalk/test/xwalkdriver/xwalk/xwalk_finder.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "xwalk/test/xwalkdriver/xwalk/xwalk_finder.h"
 
 namespace {
 

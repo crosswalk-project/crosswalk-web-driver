@@ -7,11 +7,11 @@
 
 #include "base/compiler_specific.h"
 #include "base/values.h"
+#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/xwalk/geolocation_override_manager.h"
 #include "xwalk/test/xwalkdriver/xwalk/geoposition.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/stub_devtools_client.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
 

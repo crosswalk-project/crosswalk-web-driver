@@ -6,10 +6,10 @@
 
 #include "base/json/json_reader.h"
 #include "base/values.h"
+#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/xwalk/frame_tracker.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/stub_devtools_client.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 TEST(FrameTracker, GetContextIdForFrame) {
   StubDevToolsClient client;

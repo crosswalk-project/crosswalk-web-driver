@@ -29,22 +29,22 @@
 #include "base/values.h"
 #include "crypto/sha2.h"
 #include "third_party/zlib/google/zip.h"
+#include "xwalk/test/xwalkdriver/net/port_server.h"
+#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
+#include "xwalk/test/xwalkdriver/xwalk/device.h"
+#include "xwalk/test/xwalkdriver/xwalk/android_device.h"
+#include "xwalk/test/xwalkdriver/xwalk/device_manager.h"
+#include "xwalk/test/xwalkdriver/xwalk/devtools_http_client.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/xwalk/tizen_device.h"
+#include "xwalk/test/xwalkdriver/xwalk/user_data_dir.h"
+#include "xwalk/test/xwalkdriver/xwalk/version.h"
+#include "xwalk/test/xwalkdriver/xwalk/web_view.h"
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_android_impl.h"
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_desktop_impl.h"
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_existing_impl.h"
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_finder.h"
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_tizen_impl.h"
-#include "xwalk/test/xwalkdriver/xwalk/device.h"
-#include "xwalk/test/xwalkdriver/xwalk/tizen_device.h"
-#include "xwalk/test/xwalkdriver/xwalk/android_device.h"
-#include "xwalk/test/xwalkdriver/xwalk/device_manager.h"
-#include "xwalk/test/xwalkdriver/xwalk/devtools_http_client.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/xwalk/user_data_dir.h"
-#include "xwalk/test/xwalkdriver/xwalk/version.h"
-#include "xwalk/test/xwalkdriver/xwalk/web_view.h"
-#include "xwalk/test/xwalkdriver/net/port_server.h"
-#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 
 #if defined(OS_POSIX)
 #include <fcntl.h>  // NOLINT(build/include_order)
@@ -101,7 +101,6 @@ Status WaitForDevToolsAndCheckVersion(
   base::TimeTicks deadline =
       base::TimeTicks::Now() + base::TimeDelta::FromSeconds(20);
   Status status = client->Init(deadline - base::TimeTicks::Now());
-  printf(">>>> WaitForDevToolsAndCheckVersion status %s \n", status.message().c_str());
   if (status.IsError())
     return status;
   if (client->build_no() < kMinimumSupportedXwalkBuildNo) {
@@ -367,7 +366,7 @@ Status LaunchTizenXwalk(
 Status LaunchXwalk(
     URLRequestContextGetter* context_getter,
     const SyncWebSocketFactory& socket_factory,
-    DeviceManager* device_manager,
+    scoped_ptr<DeviceManager>* device_manager,
     PortServer* port_server,
     PortManager* port_manager,
     const Capabilities& capabilities,
@@ -389,23 +388,31 @@ Status LaunchXwalk(
   if (port_status.IsError())
     return Status(kUnknownError, "cannot reserve port for Xwalk", port_status);
 
+  VLOG(0) << "Device Bridge Port: " << capabilities.device_bridge_port;
+
   if (capabilities.IsAndroid()) {
+    device_manager->reset(new DeviceManager(
+        context_getter->GetNetworkTaskRunner(),
+        capabilities.device_bridge_port, 0));
     return LaunchAndroidXwalk(context_getter,
                                port,
                                port_reservation.Pass(),
                                socket_factory,
                                capabilities,
                                devtools_event_listeners,
-                               device_manager,
+                               device_manager->get(),
                                xwalk);
   } else if (capabilities.IsTizen()) {
+    device_manager->reset(new DeviceManager(
+        context_getter->GetNetworkTaskRunner(),
+        capabilities.device_bridge_port, 1));
     return LaunchTizenXwalk(context_getter,
                              port,
                              port_reservation.Pass(),
                              socket_factory,
                              capabilities,
                              devtools_event_listeners,
-                             device_manager,
+                             device_manager->get(),
                              xwalk);
   } else {
     return LaunchDesktopXwalk(context_getter,
@@ -446,6 +453,16 @@ Status ProcessExtensions(const std::vector<std::string>& extensions,
   (void) temp_dir;
   (void) include_automation_extension;
   (void) switches;
+
+  return Status(kOk);
+}
+
+Status PrepareUserDataDir(const base::FilePath& user_data_dir,
+			  const base::DictionaryValue* custom_prefs,
+			  const base::DictionaryValue* custom_local_state) {
+  (void) user_data_dir;
+  (void) custom_prefs;
+  (void) custom_local_state;
 
   return Status(kOk);
 }
