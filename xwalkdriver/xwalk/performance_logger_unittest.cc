@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "xwalk/test/xwalkdriver/xwalk/performance_logger.h"
-
 #include <list>
 #include <string>
 
@@ -13,10 +11,11 @@
 #include "base/memory/scoped_vector.h"
 #include "base/time/time.h"
 #include "base/values.h"
+#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/xwalk/log.h"
+#include "xwalk/test/xwalkdriver/xwalk/performance_logger.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/stub_devtools_client.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
 
@@ -103,23 +102,23 @@ void FakeLog::AddEntryTimestamped(const base::Time& timestamp,
   entries_.push_back(new LogEntry(timestamp, level, source, message));
 }
 
-scoped_ptr<DictionaryValue> ParseDictionary(const std::string& json) {
+scoped_ptr<base::DictionaryValue> ParseDictionary(const std::string& json) {
   std::string error;
-  scoped_ptr<Value> value(base::JSONReader::ReadAndReturnError(
+  scoped_ptr<base::Value> value(base::JSONReader::ReadAndReturnError(
       json, base::JSON_PARSE_RFC, NULL, &error));
   if (value == NULL) {
     SCOPED_TRACE(json.c_str());
     SCOPED_TRACE(error.c_str());
     ADD_FAILURE();
-    return scoped_ptr<DictionaryValue>();
+    return scoped_ptr<base::DictionaryValue>();
   }
-  DictionaryValue* dict = NULL;
+  base::DictionaryValue* dict = NULL;
   if (!value->GetAsDictionary(&dict)) {
     SCOPED_TRACE("JSON object is not a dictionary");
     ADD_FAILURE();
-    return scoped_ptr<DictionaryValue>();
+    return scoped_ptr<base::DictionaryValue>();
   }
-  return scoped_ptr<DictionaryValue>(dict->DeepCopy());
+  return scoped_ptr<base::DictionaryValue>(dict->DeepCopy());
 }
 
 void ValidateLogEntry(const LogEntry *entry,
@@ -135,7 +134,7 @@ void ValidateLogEntry(const LogEntry *entry,
   std::string method;
   EXPECT_TRUE(message->GetString("message.method", &method));
   EXPECT_EQ(expected_method, method);
-  DictionaryValue* params;
+  base::DictionaryValue* params;
   EXPECT_TRUE(message->GetDictionary("message.params", &params));
   EXPECT_EQ(0u, params->size());
 }

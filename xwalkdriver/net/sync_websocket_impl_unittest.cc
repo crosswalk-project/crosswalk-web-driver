@@ -12,11 +12,11 @@
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread.h"
 #include "base/time/time.h"
+#include "testing/gtest/include/gtest/gtest.h"
+#include "url/gurl.h"
 #include "xwalk/test/xwalkdriver/net/sync_websocket_impl.h"
 #include "xwalk/test/xwalkdriver/net/test_http_server.h"
 #include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
-#include "testing/gtest/include/gtest/gtest.h"
-#include "url/gurl.h"
 
 namespace {
 

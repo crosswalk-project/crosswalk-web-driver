@@ -14,8 +14,9 @@
 #include "base/time/time.h"
 #include "base/values.h"
 #include "xwalk/test/xwalkdriver/basic_types.h"
-#include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
-#include "xwalk/test/xwalkdriver/xwalk/xwalk_desktop_impl.h"
+#include "xwalk/test/xwalkdriver/element_util.h"
+#include "xwalk/test/xwalkdriver/session.h"
+#include "xwalk/test/xwalkdriver/util.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/geoposition.h"
 #include "xwalk/test/xwalkdriver/xwalk/javascript_dialog_manager.h"
@@ -23,9 +24,8 @@
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view.h"
-#include "xwalk/test/xwalkdriver/element_util.h"
-#include "xwalk/test/xwalkdriver/session.h"
-#include "xwalk/test/xwalkdriver/util.h"
+#include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
+#include "xwalk/test/xwalkdriver/xwalk/xwalk_desktop_impl.h"
 
 namespace {
 

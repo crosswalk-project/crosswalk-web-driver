@@ -17,11 +17,11 @@
 #include "base/strings/stringprintf.h"
 #include "base/third_party/icu/icu_utf.h"
 #include "base/values.h"
+#include "third_party/zlib/google/zip.h"
+#include "xwalk/test/xwalkdriver/key_converter.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view.h"
-#include "xwalk/test/xwalkdriver/key_converter.h"
-#include "third_party/zlib/google/zip.h"
 
 std::string GenerateId() {
   uint64 msb = base::RandUint64();

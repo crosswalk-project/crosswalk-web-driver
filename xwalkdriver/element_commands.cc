@@ -9,21 +9,21 @@
 
 #include "base/callback.h"
 #include "base/files/file_path.h"
-#include "base/strings/string_split.h"
 #include "base/strings/stringprintf.h"
+#include "base/strings/string_split.h"
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
 #include "base/values.h"
+#include "third_party/webdriver/atoms.h"
 #include "xwalk/test/xwalkdriver/basic_types.h"
-#include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
+#include "xwalk/test/xwalkdriver/element_util.h"
+#include "xwalk/test/xwalkdriver/session.h"
+#include "xwalk/test/xwalkdriver/util.h"
 #include "xwalk/test/xwalkdriver/xwalk/js.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view.h"
-#include "xwalk/test/xwalkdriver/element_util.h"
-#include "xwalk/test/xwalkdriver/session.h"
-#include "xwalk/test/xwalkdriver/util.h"
-#include "third_party/webdriver/atoms.h"
+#include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
 
 namespace {
 

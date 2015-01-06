@@ -5,12 +5,12 @@
 #include <string>
 
 #include "base/base64.h"
-#include "base/file_util.h"
 #include "base/files/file_path.h"
+#include "base/files/file_util.h"
 #include "base/files/scoped_temp_dir.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/util.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "xwalk/test/xwalkdriver/util.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
 
 TEST(UnzipSoleFile, Entry) {
   base::ScopedTempDir temp_dir;

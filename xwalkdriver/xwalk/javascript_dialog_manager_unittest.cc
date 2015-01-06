@@ -7,10 +7,10 @@
 #include "base/callback.h"
 #include "base/memory/scoped_ptr.h"
 #include "base/values.h"
+#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/xwalk/javascript_dialog_manager.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/stub_devtools_client.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 TEST(JavaScriptDialogManager, NoDialog) {
   StubDevToolsClient client;

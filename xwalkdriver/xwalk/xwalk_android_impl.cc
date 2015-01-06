@@ -4,12 +4,12 @@
 
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_android_impl.h"
 
+#include "xwalk/test/xwalkdriver/net/port_server.h"
 #include "xwalk/test/xwalkdriver/xwalk/android_device.h"
 #include "xwalk/test/xwalkdriver/xwalk/device.h"
 #include "xwalk/test/xwalkdriver/xwalk/device_manager.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_http_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/net/port_server.h"
 
 XwalkAndroidImpl::XwalkAndroidImpl(
     scoped_ptr<DevToolsHttpClient> client,

@@ -19,12 +19,12 @@
 #include "base/sys_info.h"
 #include "base/values.h"
 #include "xwalk/test/xwalkdriver/capabilities.h"
-#include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/logging.h"
 #include "xwalk/test/xwalkdriver/session.h"
 #include "xwalk/test/xwalkdriver/session_thread_map.h"
 #include "xwalk/test/xwalkdriver/util.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
 
 void ExecuteGetStatus(
     const base::DictionaryValue& params,

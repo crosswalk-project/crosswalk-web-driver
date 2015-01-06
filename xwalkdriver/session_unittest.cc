@@ -6,11 +6,11 @@
 #include <string>
 
 #include "base/memory/scoped_ptr.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/xwalk/stub_xwalk.h"
-#include "xwalk/test/xwalkdriver/xwalk/stub_web_view.h"
-#include "xwalk/test/xwalkdriver/session.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "xwalk/test/xwalkdriver/session.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/xwalk/stub_web_view.h"
+#include "xwalk/test/xwalkdriver/xwalk/stub_xwalk.h"
 
 namespace {
 

@@ -12,10 +12,10 @@
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/thread.h"
 #include "base/time/time.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/net/port_server.h"
 #include "net/base/sys_addrinfo.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "xwalk/test/xwalkdriver/net/port_server.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
 
 #if defined(OS_LINUX)
 #include <fcntl.h>  // NOLINT

@@ -13,10 +13,10 @@
 #include "base/strings/stringprintf.h"
 #include "base/time/time.h"
 #include "xwalk/test/xwalkdriver/capabilities.h"
+#include "xwalk/test/xwalkdriver/session.h"
 #include "xwalk/test/xwalkdriver/xwalk/console_logger.h"
 #include "xwalk/test/xwalkdriver/xwalk/performance_logger.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/session.h"
 
 #if defined(OS_POSIX)
 #include <fcntl.h>  // NOLINT

@@ -12,15 +12,30 @@
 #include "base/compiler_specific.h"
 #include "base/memory/ref_counted.h"
 #include "base/memory/scoped_ptr.h"
+#include "base/message_loop/message_loop.h"
+#include "base/single_thread_task_runner.h"
 #include "base/synchronization/lock.h"
 
 class DeviceBridge;
 class Status;
 class Device;
 
+namespace internal {
+
+  enum DeviceType {
+    kAndroid = 0,
+    kTizen,
+    kUnknown
+  };
+
+} // namespace internal
+
 class DeviceManager {
  public:
-  explicit DeviceManager(DeviceBridge* device_bridge);
+  explicit DeviceManager(
+      const scoped_refptr<base::SingleThreadTaskRunner> io_task_runner,
+      int port,
+      int device_type);
   ~DeviceManager();
 
   // Returns a device which will not be reassigned during its lifetime.
@@ -39,9 +54,8 @@ class DeviceManager {
 
   base::Lock devices_lock_;
   std::list<std::string> active_devices_;
-  DeviceBridge* device_bridge_;
+  scoped_ptr<DeviceBridge> device_bridge_;
 
-  DISALLOW_COPY_AND_ASSIGN(DeviceManager);
 };
 
 #endif  // XWALK_TEST_XWALKDRIVER_XWALK_DEVICE_MANAGER_H_

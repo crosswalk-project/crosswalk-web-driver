@@ -241,13 +241,8 @@ Status AdbImpl::ExecuteCommand(
   io_task_runner_->PostTask(
       FROM_HERE,
       base::Bind(&ExecuteCommandOnIOThread, command, response_buffer, port_));
-  if (command.find("ps auxww") != std::string::npos)
-    sleep(1);
-  int delta_time = 30;
-  if (command.find("xwalkctl") != std::string::npos)
-    delta_time = 3;
   Status status = response_buffer->GetResponse(
-      response, base::TimeDelta::FromSeconds(delta_time));
+      response, base::TimeDelta::FromSeconds(30));
   if (status.IsOk()) {
     VLOG(1) << "Received adb response: " << *response;
   }

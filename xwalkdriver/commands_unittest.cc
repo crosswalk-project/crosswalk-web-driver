@@ -14,17 +14,17 @@
 #include "base/synchronization/lock.h"
 #include "base/threading/thread.h"
 #include "base/values.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/xwalk/stub_xwalk.h"
-#include "xwalk/test/xwalkdriver/xwalk/stub_web_view.h"
-#include "xwalk/test/xwalkdriver/xwalk/web_view.h"
+#include "testing/gtest/include/gtest/gtest.h"
+#include "third_party/webdriver/atoms.h"
 #include "xwalk/test/xwalkdriver/commands.h"
 #include "xwalk/test/xwalkdriver/element_commands.h"
 #include "xwalk/test/xwalkdriver/session.h"
 #include "xwalk/test/xwalkdriver/session_commands.h"
 #include "xwalk/test/xwalkdriver/window_commands.h"
-#include "testing/gtest/include/gtest/gtest.h"
-#include "third_party/webdriver/atoms.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/xwalk/stub_web_view.h"
+#include "xwalk/test/xwalkdriver/xwalk/stub_xwalk.h"
+#include "xwalk/test/xwalkdriver/xwalk/web_view.h"
 
 namespace {
 

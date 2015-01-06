@@ -7,11 +7,11 @@
 
 #include "base/strings/string16.h"
 #include "base/strings/utf_string_conversions.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
+#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/key_converter.h"
 #include "xwalk/test/xwalkdriver/test_util.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
 
 namespace {
 

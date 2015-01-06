@@ -7,10 +7,10 @@
 
 #include "base/memory/scoped_ptr.h"
 #include "base/values.h"
+#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/xwalk/heap_snapshot_taker.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/stub_devtools_client.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
 
@@ -20,7 +20,7 @@ scoped_ptr<base::Value> GetSnapshotAsValue() {
   scoped_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetInteger("a", 1);
   dict->SetInteger("b", 2);
-  return dict.PassAs<base::Value>();
+  return dict.Pass();
 }
 
 class DummyDevToolsClient : public StubDevToolsClient {

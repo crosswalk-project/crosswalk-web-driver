@@ -18,20 +18,19 @@
 #include "base/values.h"
 #include "xwalk/test/xwalkdriver/basic_types.h"
 #include "xwalk/test/xwalkdriver/capabilities.h"
-#include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
-#include "xwalk/test/xwalkdriver/xwalk/xwalk_android_impl.h"
-#include "xwalk/test/xwalkdriver/xwalk/xwalk_desktop_impl.h"
-#include "xwalk/test/xwalkdriver/xwalk/device_manager.h"
-#include "xwalk/test/xwalkdriver/xwalk/devtools_event_listener.h"
-#include "xwalk/test/xwalkdriver/xwalk/geoposition.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/xwalk/web_view.h"
-#include "xwalk/test/xwalkdriver/xwalk_launcher.h"
 #include "xwalk/test/xwalkdriver/logging.h"
 #include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 #include "xwalk/test/xwalkdriver/session.h"
 #include "xwalk/test/xwalkdriver/util.h"
 #include "xwalk/test/xwalkdriver/version.h"
+#include "xwalk/test/xwalkdriver/xwalk_launcher.h"
+#include "xwalk/test/xwalkdriver/xwalk/device_manager.h"
+#include "xwalk/test/xwalkdriver/xwalk/devtools_event_listener.h"
+#include "xwalk/test/xwalkdriver/xwalk/geoposition.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/xwalk/web_view.h"
+#include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
+#include "xwalk/test/xwalkdriver/xwalk/xwalk_desktop_impl.h"
 
 namespace {
 
@@ -55,7 +54,7 @@ bool WindowHandleToWebViewId(const std::string& window_handle,
 InitSessionParams::InitSessionParams(
     scoped_refptr<URLRequestContextGetter> context_getter,
     const SyncWebSocketFactory& socket_factory,
-    DeviceManager* device_manager,
+    scoped_ptr<DeviceManager>* device_manager,
     PortServer* port_server,
     PortManager* port_manager)
     : context_getter(context_getter),

@@ -15,13 +15,13 @@
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
 #include "base/values.h"
+#include "xwalk/test/xwalkdriver/net/net_util.h"
+#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_client_impl.h"
 #include "xwalk/test/xwalkdriver/xwalk/log.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/version.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view_impl.h"
-#include "xwalk/test/xwalkdriver/net/net_util.h"
-#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 
 namespace {
 
@@ -81,7 +81,7 @@ DevToolsHttpClient::~DevToolsHttpClient() {}
 Status DevToolsHttpClient::Init(const base::TimeDelta& timeout) {
   base::TimeTicks deadline = base::TimeTicks::Now() + timeout;
   std::string devtools_version;
-  printf("DevTools server address is %s \n", server_url_.c_str());
+  VLOG(0) << "DevTools server address is " + server_url_;
   while (true) {
     Status status = GetVersion(&devtools_version);
     if (status.IsOk())

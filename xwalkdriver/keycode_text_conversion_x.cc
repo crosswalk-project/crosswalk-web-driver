@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "xwalk/test/xwalkdriver/keycode_text_conversion.h"
-
 #include <algorithm>
 #include <X11/keysym.h>  //NOLINT
 #include <X11/XKBlib.h>  //NOLINT
@@ -11,9 +9,10 @@
 #include <X11/Xutil.h>  //NOLINT
 
 #include "base/strings/utf_string_conversions.h"
-#include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
 #include "ui/base/x/x11_util.h"
 #include "ui/events/keycodes/keyboard_code_conversion_x.h"
+#include "xwalk/test/xwalkdriver/keycode_text_conversion.h"
+#include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
 
 namespace {
 

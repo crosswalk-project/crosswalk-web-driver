@@ -14,10 +14,10 @@
 #include "base/memory/scoped_ptr.h"
 #include "base/synchronization/condition_variable.h"
 #include "base/synchronization/lock.h"
-#include "xwalk/test/xwalkdriver/net/sync_websocket.h"
-#include "xwalk/test/xwalkdriver/net/websocket.h"
 #include "net/base/completion_callback.h"
 #include "net/socket_stream/socket_stream.h"
+#include "xwalk/test/xwalkdriver/net/sync_websocket.h"
+#include "xwalk/test/xwalkdriver/net/websocket.h"
 
 namespace base {
 class WaitableEvent;

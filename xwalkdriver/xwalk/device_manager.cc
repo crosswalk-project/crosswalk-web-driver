@@ -14,14 +14,24 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/string_util.h"
+#include "xwalk/test/xwalkdriver/xwalk/adb_impl.h"
 #include "xwalk/test/xwalkdriver/xwalk/android_device.h"
 #include "xwalk/test/xwalkdriver/xwalk/device.h"
 #include "xwalk/test/xwalkdriver/xwalk/device_bridge.h"
+#include "xwalk/test/xwalkdriver/xwalk/sdb_impl.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/tizen_device.h"
 
 DeviceManager::DeviceManager(
-    DeviceBridge* device_bridge) : device_bridge_(device_bridge) {
+    const scoped_refptr<base::SingleThreadTaskRunner> io_task_runner,
+    int port,
+    int device_type) {
+  if (device_type == internal::kAndroid)
+    device_bridge_.reset(new AdbImpl(io_task_runner, port));
+  else if (device_type == internal::kTizen)
+    device_bridge_.reset(new SdbImpl(io_task_runner, port));
+  else
+    ;
   CHECK(device_bridge_);
 }
 
@@ -29,7 +39,7 @@ DeviceManager::~DeviceManager() {}
 
 Status DeviceManager::AcquireDevice(scoped_ptr<Device>* device) {
   std::vector<std::string> devices;
-  Status status = device_bridge_->GetDevices(&devices);
+  Status status = device_bridge_.get()->GetDevices(&devices);
   if (status.IsError())
     return status;
 
@@ -58,7 +68,7 @@ Status DeviceManager::AcquireDevice(scoped_ptr<Device>* device) {
 Status DeviceManager::AcquireSpecificDevice(
     const std::string& device_serial, scoped_ptr<Device>* device) {
   std::vector<std::string> devices;
-  Status status = device_bridge_->GetDevices(&devices);
+  Status status = device_bridge_.get()->GetDevices(&devices);
   if (status.IsError())
     return status;
 
@@ -89,14 +99,14 @@ void DeviceManager::ReleaseDevice(const std::string& device_serial) {
 Device* DeviceManager::LockDevice(const std::string& device_serial) {
   active_devices_.push_back(device_serial);
   std::string os_name = base::StringToLowerASCII(
-                            device_bridge_->GetOperatingSystemName());
+                            device_bridge_.get()->GetOperatingSystemName());
 
   if (os_name.find("android") != std::string::npos)
-    return new AndroidDevice(device_serial, device_bridge_,
+    return new AndroidDevice(device_serial, device_bridge_.get(),
         base::Bind(&DeviceManager::ReleaseDevice, base::Unretained(this),
                    device_serial));
   else
-    return new TizenDevice(device_serial, device_bridge_,
+    return new TizenDevice(device_serial, device_bridge_.get(),
         base::Bind(&DeviceManager::ReleaseDevice, base::Unretained(this),
                    device_serial));
 }

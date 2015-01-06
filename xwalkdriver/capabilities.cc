@@ -10,16 +10,16 @@
 #include "base/callback.h"
 #include "base/json/string_escape.h"
 #include "base/logging.h"
+#include "base/strings/stringprintf.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_tokenizer.h"
 #include "base/strings/string_util.h"
-#include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/values.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/logging.h"
 #include "net/base/net_util.h"
+#include "xwalk/test/xwalkdriver/logging.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
 
 namespace {
 
@@ -81,6 +81,19 @@ Status IgnoreCapability(const base::Value& option, Capabilities* capabilities) {
 Status ParseLogPath(const base::Value& option, Capabilities* capabilities) {
   if (!option.GetAsString(&capabilities->log_path))
     return Status(kUnknownError, "must be a string");
+  return Status(kOk);
+}
+
+Status ParseDeviceBridgePort(const base::Value& option,
+                             Capabilities* capabilities) {
+  if (!option.GetAsInteger(&capabilities->device_bridge_port))
+    return Status(kUnknownError, "must be a integer");
+  if (capabilities->IsTizen()) {
+    // since now, tizen smart development bridge server listen on
+    // stationary port (26099), we have no chance to choose desired
+    // port in fact.
+    capabilities->device_bridge_port = 26099;
+  }
   return Status(kOk);
 }
 
@@ -255,20 +268,24 @@ Status ParseXwalkOptions(
   parser_map["binary"] = base::Bind(&IgnoreCapability);
   parser_map["extensions"] = base::Bind(&IgnoreCapability);
   if (is_android) {
+    capabilities->device_bridge_port = 5037;
     parser_map["androidActivity"] =
         base::Bind(&ParseString, &capabilities->android_activity);
     parser_map["androidDeviceSerial"] =
         base::Bind(&ParseString, &capabilities->device_serial);
     parser_map["androidPackage"] =
         base::Bind(&ParseString, &capabilities->android_package);
+    parser_map["adb-port"] = base::Bind(&ParseDeviceBridgePort);
     parser_map["args"] = base::Bind(&ParseSwitches);
     parser_map["loadAsync"] = base::Bind(&IgnoreDeprecatedOption, "loadAsync");
   } else if (is_tizen) {
+    capabilities->device_bridge_port = 26099;
     parser_map["tizenDebuggerAddress"] = base::Bind(&ParseUseExistingBrowser);
     parser_map["tizenAppId"] =
         base::Bind(&ParseString, &capabilities->tizen_app_id);
     parser_map["tizenDeviceSerial"] =
         base::Bind(&ParseString, &capabilities->device_serial);
+    parser_map["sdb-port"] = base::Bind(&ParseDeviceBridgePort);
   } else if (is_existing) {
     parser_map["debuggerAddress"] = base::Bind(&ParseUseExistingBrowser);
   } else {

@@ -24,16 +24,16 @@
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_local.h"
-#include "xwalk/test/xwalkdriver/logging.h"
-#include "xwalk/test/xwalkdriver/net/port_server.h"
-#include "xwalk/test/xwalkdriver/server/http_handler.h"
-#include "xwalk/test/xwalkdriver/version.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
 #include "net/server/http_server.h"
 #include "net/server/http_server_request_info.h"
 #include "net/server/http_server_response_info.h"
 #include "net/socket/tcp_server_socket.h"
+#include "xwalk/test/xwalkdriver/logging.h"
+#include "xwalk/test/xwalkdriver/net/port_server.h"
+#include "xwalk/test/xwalkdriver/server/http_handler.h"
+#include "xwalk/test/xwalkdriver/version.h"
 
 namespace {
 
@@ -169,8 +169,6 @@ void RunServer(int port,
                bool allow_remote,
                const std::vector<std::string>& whitelisted_ips,
                const std::string& url_base,
-               int adb_port,
-               int sdb_port,
                scoped_ptr<PortServer> port_server) {
   base::Thread io_thread("XwalkDriver IO");
   CHECK(io_thread.StartWithOptions(
@@ -181,8 +179,6 @@ void RunServer(int port,
   HttpHandler handler(cmd_run_loop.QuitClosure(),
                       io_thread.message_loop_proxy(),
                       url_base,
-                      adb_port,
-                      sdb_port,
                       port_server.Pass());
   HttpRequestHandlerFunc handle_request_func =
       base::Bind(&HandleRequestOnCmdThread, &handler, whitelisted_ips);
@@ -222,18 +218,14 @@ int main(int argc, char *argv[]) {
 
   // Parse command line flags.
   int port = 9515;
-  int adb_port = 5037;
   bool allow_remote = false;
   std::vector<std::string> whitelisted_ips;
-  int sdb_port = 26099;
   std::string url_base;
   scoped_ptr<PortServer> port_server;
   if (cmd_line->HasSwitch("h") || cmd_line->HasSwitch("help")) {
     std::string options;
     const char* kOptionAndDescriptions[] = {
         "port=PORT", "port to listen on",
-        "adb-port=PORT", "adb server port",
-        "sdb-port=PORT", "sdb server port, e.g -sdb-port=26099",
         "log-path=FILE", "write server log to file instead of stderr, "
             "increases log level to INFO",
         "verbose", "log verbosely",
@@ -260,22 +252,6 @@ int main(int argc, char *argv[]) {
     if (!base::StringToInt(cmd_line->GetSwitchValueASCII("port"), &port)) {
       printf("Invalid port. Exiting...\n");
       return 1;
-    }
-  }
-  if (cmd_line->HasSwitch("adb-port")) {
-    if (!base::StringToInt(cmd_line->GetSwitchValueASCII("adb-port"),
-                           &adb_port)) {
-      printf("Invalid adb-port. Exiting...\n");
-      return 1;
-    }
-  }
-  if (cmd_line->HasSwitch("sdb-port")) {
-    if (!base::StringToInt(cmd_line->GetSwitchValueASCII("sdb-port"),
-                           &sdb_port)) {
-      printf("Invalid sdb-port. Exiting...\n");
-      return 1;
-    } else {
-      adb_port = 0;
     }
   }
   if (cmd_line->HasSwitch("port-server")) {
@@ -306,9 +282,8 @@ int main(int argc, char *argv[]) {
     base::SplitString(whitelist, ',', &whitelisted_ips);
   }
   if (!cmd_line->HasSwitch("silent")) {
-    printf(
-        "Merry Christmas Eve from XwalkDriver Team: "
-        "Starting XwalkDriver (v%s) on port %d\n", kXwalkDriverVersion, port);
+    printf("Starting XwalkDriver (v%s) on port %d\n",
+        kXwalkDriverVersion, port);
 	if (!allow_remote) {
 	  printf("Only local connections are allowed.\n");
 	} else if (!whitelisted_ips.empty()) {
@@ -325,6 +300,6 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   RunServer(port, allow_remote, whitelisted_ips,
-			url_base, adb_port, sdb_port, port_server.Pass());
+			url_base, port_server.Pass());
   return 0;
 }

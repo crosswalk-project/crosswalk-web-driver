@@ -28,14 +28,14 @@ class URLRequestContextGetter;
 struct InitSessionParams {
   InitSessionParams(scoped_refptr<URLRequestContextGetter> context_getter,
                     const SyncWebSocketFactory& socket_factory,
-                    DeviceManager* device_manager,
+                    scoped_ptr<DeviceManager>* device_manager,
                     PortServer* port_server,
                     PortManager* port_manager);
   ~InitSessionParams();
 
   scoped_refptr<URLRequestContextGetter> context_getter;
   SyncWebSocketFactory socket_factory;
-  DeviceManager* device_manager;
+  scoped_ptr<DeviceManager>* device_manager;
   PortServer* port_server;
   PortManager* port_manager;
 };

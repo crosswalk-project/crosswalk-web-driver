@@ -8,10 +8,10 @@
 #include "base/compiler_specific.h"
 #include "base/memory/scoped_ptr.h"
 #include "base/values.h"
+#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view_impl.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
 

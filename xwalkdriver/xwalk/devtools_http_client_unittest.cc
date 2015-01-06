@@ -6,9 +6,9 @@
 
 #include "base/compiler_specific.h"
 #include "base/values.h"
+#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_http_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
 

@@ -14,8 +14,8 @@
 #include "base/files/file_path.h"
 #include "base/memory/scoped_ptr.h"
 #include "base/strings/string16.h"
-#include "xwalk/test/xwalkdriver/xwalk/log.h"
 #include "xwalk/test/xwalkdriver/net/net_util.h"
+#include "xwalk/test/xwalkdriver/xwalk/log.h"
 
 namespace base {
 class DictionaryValue;
@@ -80,6 +80,10 @@ struct Capabilities {
   std::string android_package;
 
   std::string tizen_app_id;
+
+  // Device bridge server port for device bridge client to connect
+  // e.g adb-port on android and sdb-port on tizen
+  int device_bridge_port;
 
   // Target device serial
   std::string device_serial;

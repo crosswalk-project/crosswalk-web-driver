@@ -7,9 +7,9 @@
 #include "base/format_macros.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
+#include "xwalk/test/xwalkdriver/keycode_text_conversion.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
-#include "xwalk/test/xwalkdriver/keycode_text_conversion.h"
 
 namespace {
 

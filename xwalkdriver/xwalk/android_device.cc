@@ -77,7 +77,7 @@ Status AndroidDevice::ForwardDevtoolsPort(const std::string& package,
 
   std::string remote_abstract;
   remote_abstract = base::StringPrintf("%s_devtools_remote", package.c_str());
-  printf("Device socket is: %s \n", remote_abstract.c_str());
+  VLOG(0) << "Device socket is: " + remote_abstract;
   
   return device_bridge_->ForwardPort(serial_, local_port, remote_abstract);
 }

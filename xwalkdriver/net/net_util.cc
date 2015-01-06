@@ -12,10 +12,10 @@
 #include "base/message_loop/message_loop.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
-#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 #include "net/url_request/url_fetcher.h"
 #include "net/url_request/url_fetcher_delegate.h"
 #include "url/gurl.h"
+#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 
 namespace {
 

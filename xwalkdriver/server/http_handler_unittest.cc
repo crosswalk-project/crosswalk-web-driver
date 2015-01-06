@@ -8,14 +8,14 @@
 #include "base/json/json_writer.h"
 #include "base/memory/scoped_ptr.h"
 #include "base/values.h"
-#include "xwalk/test/xwalkdriver/xwalk/log.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/command.h"
-#include "xwalk/test/xwalkdriver/server/http_handler.h"
 #include "net/http/http_status_code.h"
 #include "net/server/http_server_request_info.h"
 #include "net/server/http_server_response_info.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "xwalk/test/xwalkdriver/command.h"
+#include "xwalk/test/xwalkdriver/server/http_handler.h"
+#include "xwalk/test/xwalkdriver/xwalk/log.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
 
 namespace {
 

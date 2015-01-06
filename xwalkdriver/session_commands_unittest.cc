@@ -6,20 +6,20 @@
 
 #include "base/bind.h"
 #include "base/callback.h"
-#include "base/file_util.h"
 #include "base/files/file_path.h"
+#include "base/files/file_util.h"
 #include "base/memory/linked_ptr.h"
 #include "base/memory/scoped_ptr.h"
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/threading/thread.h"
 #include "base/values.h"
+#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/stub_xwalk.h"
 #include "xwalk/test/xwalkdriver/commands.h"
 #include "xwalk/test/xwalkdriver/session.h"
 #include "xwalk/test/xwalkdriver/session_commands.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 TEST(SessionCommandTest, FileUpload) {
   Session session("id");

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "xwalk/test/xwalkdriver/xwalk/console_logger.h"
-
 #include <list>
 #include <string>
 
@@ -12,10 +10,11 @@
 #include "base/memory/scoped_vector.h"
 #include "base/time/time.h"
 #include "base/values.h"
+#include "testing/gtest/include/gtest/gtest.h"
+#include "xwalk/test/xwalkdriver/xwalk/console_logger.h"
 #include "xwalk/test/xwalkdriver/xwalk/log.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/stub_devtools_client.h"
-#include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
 

@@ -32,7 +32,7 @@ class URLRequestContextGetter;
 Status LaunchXwalk(
     URLRequestContextGetter* context_getter,
     const SyncWebSocketFactory& socket_factory,
-    DeviceManager* device_manager,
+    scoped_ptr<DeviceManager>* device_manager,
     PortServer* port_server,
     PortManager* port_manager,
     const Capabilities& capabilities,

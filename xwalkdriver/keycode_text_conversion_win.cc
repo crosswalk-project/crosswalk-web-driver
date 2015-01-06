@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "xwalk/test/xwalkdriver/keycode_text_conversion.h"
-
 #include <windows.h>
-
 #include <cctype>
 
 #include "base/strings/utf_string_conversions.h"
+#include "xwalk/test/xwalkdriver/keycode_text_conversion.h"
 #include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
 
 bool ConvertKeyCodeToText(

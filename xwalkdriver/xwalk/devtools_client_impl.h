@@ -14,9 +14,9 @@
 #include "base/compiler_specific.h"
 #include "base/memory/linked_ptr.h"
 #include "base/memory/scoped_ptr.h"
-#include "xwalk/test/xwalkdriver/xwalk/devtools_client.h"
-#include "xwalk/test/xwalkdriver/net/sync_websocket_factory.h"
 #include "url/gurl.h"
+#include "xwalk/test/xwalkdriver/net/sync_websocket_factory.h"
+#include "xwalk/test/xwalkdriver/xwalk/devtools_client.h"
 
 namespace base {
 class DictionaryValue;
