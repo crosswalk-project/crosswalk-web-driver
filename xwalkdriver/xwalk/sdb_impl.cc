@@ -86,7 +86,8 @@ bool SdbImpl::IsTizenAppRunning(
   std::string  response;
   std::string app_launcher_cmd = "su - app -c \"app_launcher -S\"";
 
-  Status status = ExecuteHostShellCommand(device_serial, app_launcher_cmd, &response);
+  Status status = ExecuteHostShellCommand(
+      device_serial, app_launcher_cmd, &response);
 
   return (response.find(app_id) != std::string::npos);
 }
@@ -100,7 +101,10 @@ Status SdbImpl::GetDevices(std::vector<std::string>* devices) {
   while (lines.GetNext()) {
     std::vector<std::string> fields;
     base::SplitStringAlongWhitespace(lines.token(), &fields);
-    if ((fields.size() == 3 || fields.size() == 2) && fields[1] == "device") {
+    // Should not determine the online state by size of field(whitespace counts)
+    // since we can't not assume what target hostname outcome looks like.
+    // e.g. "<Unknown>", "Tizen IVI 3.0"
+    if ((fields.size() >= 2) && fields[1] == "device") {
       devices->push_back(fields[0]);
     }
   }
@@ -138,12 +142,13 @@ Status SdbImpl::CheckAppInstalled(
   std::string response;
   std::string app_launcher_cmd = "su - app -c \"app_launcher -l\"";
 
-  Status status = ExecuteHostShellCommand(device_serial, app_launcher_cmd, &response);
+  Status status = ExecuteHostShellCommand(
+      device_serial, app_launcher_cmd, &response);
   printf (">>>>>>>> SdbImpl::CheckInstall %s \n", status.message().c_str());
  
   if (response.find(app_id) == std::string::npos)
-    return Status(kUnknownError, app_id + " is not installed on device " +
-                  device_serial);
+    return Status(kUnknownError,
+        app_id + " is not installed on device " + device_serial);
   return Status(kOk);
 }
 
@@ -170,13 +175,14 @@ Status SdbImpl::Launch(
 
   if (status.IsError())
     return Status(kUnknownError, 
-                  "Failed to re-launch " + app_id + " on device " + device_serial);
+        "Failed to re-launch " + app_id + " on device " + device_serial);
 
   std::string response;
   std::string app_launcher_cmd = "su - app -c \" "\
-                              "app_launcher -s " + app_id + " -d \"";
+      "app_launcher -s " + app_id + " -d \"";
 
-  status = ExecuteHostShellCommand(device_serial, app_launcher_cmd, &response);
+  status = ExecuteHostShellCommand(
+      device_serial, app_launcher_cmd, &response);
 
   printf (">>>>>>>> SdbImpl::launched \n");
   if (status.IsError())
@@ -190,7 +196,7 @@ Status SdbImpl::ForceStop(
     const std::string& app_id) {
   std::string response;
   std::string app_launcher_cmd = "su - app -c \" "\
-                      "app_launcher -k " + app_id + " \"";
+      "app_launcher -k " + app_id + " \"";
   return  ExecuteHostShellCommand(device_serial, app_launcher_cmd, &response);
 }
 
@@ -223,7 +229,7 @@ Status SdbImpl::GetPidByName(
   }
 
   return Status(kUnknownError,
-                "Failed to get PID for the following process: " + process_name);
+      "Failed to get PID for the following process: " + process_name);
 }
 
 std::string SdbImpl::GetOperatingSystemName() {
@@ -241,8 +247,6 @@ Status SdbImpl::ExecuteCommand(
   if (command.find("ps auxww") != std::string::npos)
     sleep(1);
   int delta_time = 30;
-  if (command.find("xwalkctl") != std::string::npos)
-    delta_time = 3;
   Status status = response_buffer->GetResponse(
       response, base::TimeDelta::FromSeconds(delta_time));
   if (status.IsOk()) {
