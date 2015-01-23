@@ -89,7 +89,7 @@ Status AdbImpl::GetDevices(std::vector<std::string>* devices) {
   while (lines.GetNext()) {
     std::vector<std::string> fields;
     base::SplitStringAlongWhitespace(lines.token(), &fields);
-    if ((fields.size() == 3 || fields.size() == 2) && fields[1] == "device") {
+    if (fields.size() == 2 && fields[1] == "device") {
       devices->push_back(fields[0]);
     }
   }
