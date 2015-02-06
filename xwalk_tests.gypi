@@ -11,13 +11,6 @@
         'sysapps/sysapps_tests.gyp:xwalk_sysapps_browsertest',
         'sysapps/sysapps_tests.gyp:xwalk_sysapps_unittest',
       ],
-      'conditions': [
-        ['OS=="linux"', {
-          'dependencies': [
-            'dbus/xwalk_dbus.gyp:xwalk_dbus_unittests',
-          ],
-        }],
-      ],
     },
     {
       'target_name': 'xwalk_unittest',
@@ -33,15 +26,14 @@
         'xwalk_runtime',
       ],
       'sources': [
-        'application/browser/application_event_router_unittest.cc',
-        'application/browser/application_storage_impl_unittest.cc',
-        'application/browser/installer/package_unittest.cc',
+        'application/common/package/package_unittest.cc',
         'application/common/application_unittest.cc',
         'application/common/application_file_util_unittest.cc',
         'application/common/id_util_unittest.cc',
         'application/common/manifest_handlers/csp_handler_unittest.cc',
-        'application/common/manifest_handlers/main_document_handler_unittest.cc',
         'application/common/manifest_handlers/permissions_handler_unittest.cc',
+        'application/common/manifest_handlers/unittest_util.cc',
+        'application/common/manifest_handlers/unittest_util.h',
         'application/common/manifest_handlers/warp_handler_unittest.cc',
         'application/common/manifest_handlers/widget_handler_unittest.cc',
         'application/common/manifest_handler_unittest.cc',
@@ -60,7 +52,9 @@
         }],
         ['tizen==1', {
           'sources': [
-            'application/common/manifest_handlers/navigation_handler_unittest.cc',
+            'application/common/manifest_handlers/tizen_appwidget_handler_unittest.cc',
+            'application/common/manifest_handlers/tizen_metadata_handler_unittest.cc',
+            'application/common/manifest_handlers/tizen_navigation_handler_unittest.cc',
           ],
         }],
       ],
@@ -404,15 +398,12 @@
       'sources': [
         'application/test/application_browsertest.cc',
         'application/test/application_browsertest.h',
-        'application/test/application_event_test.cc',
-        'application/test/application_eventapi_test.cc',
-        'application/test/application_main_document_browsertest.cc',
-        'application/test/application_multi_app_test.cc',
+        'application/test/application_test.cc',
         'application/test/application_testapi.cc',
         'application/test/application_testapi.h',
         'application/test/application_testapi_test.cc',
+        'experimental/native_file_system/native_file_system_api_browsertest.cc',
         'runtime/browser/devtools/xwalk_devtools_browsertest.cc',
-        'runtime/browser/geolocation/xwalk_geolocation_browsertest.cc',
         'runtime/browser/ui/taskbar_util_browsertest_win.cc',
         'runtime/browser/xwalk_download_browsertest.cc',
         'runtime/browser/xwalk_form_input_browsertest.cc',

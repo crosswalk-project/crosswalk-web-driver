@@ -10,7 +10,7 @@
 
 TEST(Switches, Empty) {
   Switches switches;
-  CommandLine cmd(CommandLine::NO_PROGRAM);
+  base::CommandLine cmd(base::CommandLine::NO_PROGRAM);
   switches.AppendToCommandLine(&cmd);
   ASSERT_EQ(0u, cmd.GetSwitches().size());
   ASSERT_EQ("", switches.ToString());
@@ -23,7 +23,7 @@ TEST(Switches, NoValue) {
   ASSERT_TRUE(switches.HasSwitch("hello"));
   ASSERT_EQ("", switches.GetSwitchValue("hello"));
 
-  CommandLine cmd(CommandLine::NO_PROGRAM);
+  base::CommandLine cmd(base::CommandLine::NO_PROGRAM);
   switches.AppendToCommandLine(&cmd);
   ASSERT_TRUE(cmd.HasSwitch("hello"));
   ASSERT_EQ(FILE_PATH_LITERAL(""), cmd.GetSwitchValueNative("hello"));
@@ -37,7 +37,7 @@ TEST(Switches, Value) {
   ASSERT_TRUE(switches.HasSwitch("hello"));
   ASSERT_EQ("there", switches.GetSwitchValue("hello"));
 
-  CommandLine cmd(CommandLine::NO_PROGRAM);
+  base::CommandLine cmd(base::CommandLine::NO_PROGRAM);
   switches.AppendToCommandLine(&cmd);
   ASSERT_TRUE(cmd.HasSwitch("hello"));
   ASSERT_EQ(FILE_PATH_LITERAL("there"), cmd.GetSwitchValueNative("hello"));
@@ -77,7 +77,7 @@ TEST(Switches, Multiple) {
   switches.SetSwitch("switch");
   switches.SetSwitch("hello", "there");
 
-  CommandLine cmd(CommandLine::NO_PROGRAM);
+  base::CommandLine cmd(base::CommandLine::NO_PROGRAM);
   switches.AppendToCommandLine(&cmd);
   ASSERT_TRUE(cmd.HasSwitch("switch"));
   ASSERT_TRUE(cmd.HasSwitch("hello"));

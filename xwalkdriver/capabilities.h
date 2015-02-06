@@ -49,7 +49,7 @@ class Switches {
 
   size_t GetSize() const;
 
-  void AppendToCommandLine(CommandLine* command) const;
+  void AppendToCommandLine(base::CommandLine* command) const;
   std::string ToString() const;
 
  private:

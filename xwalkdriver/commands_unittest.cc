@@ -272,7 +272,7 @@ class FindElementWebView : public StubWebView {
       }
     }
   }
-  virtual ~FindElementWebView() {}
+  ~FindElementWebView() override {}
 
   void Verify(const std::string& expected_frame,
               const base::ListValue* expected_args,
@@ -291,10 +291,10 @@ class FindElementWebView : public StubWebView {
   }
 
   // Overridden from WebView:
-  virtual Status CallFunction(const std::string& frame,
-                              const std::string& function,
-                              const base::ListValue& args,
-                              scoped_ptr<base::Value>* result) override {
+  Status CallFunction(const std::string& frame,
+                      const std::string& function,
+                      const base::ListValue& args,
+                      scoped_ptr<base::Value>* result) override {
     ++current_count_;
     if (scenario_ == kElementExistsTimeout ||
         (scenario_ == kElementExistsQueryTwice && current_count_ == 1)) {
@@ -500,13 +500,13 @@ class ErrorCallFunctionWebView : public StubWebView {
  public:
   explicit ErrorCallFunctionWebView(StatusCode code)
       : StubWebView("1"), code_(code) {}
-  virtual ~ErrorCallFunctionWebView() {}
+  ~ErrorCallFunctionWebView() override {}
 
   // Overridden from WebView:
-  virtual Status CallFunction(const std::string& frame,
-                              const std::string& function,
-                              const base::ListValue& args,
-                              scoped_ptr<base::Value>* result) override {
+  Status CallFunction(const std::string& frame,
+                      const std::string& function,
+                      const base::ListValue& args,
+                      scoped_ptr<base::Value>* result) override {
     return Status(code_);
   }
 

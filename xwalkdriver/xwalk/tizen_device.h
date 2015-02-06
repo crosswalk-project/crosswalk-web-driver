@@ -21,14 +21,14 @@ class DeviceManager;
 
 class TizenDevice : public Device{
  public:
-  virtual ~TizenDevice();
+  ~TizenDevice() override;
 
-  virtual Status SetUp(const std::string& app_id,
-                       const std::string& args,
-                       int local_port,
-                       int remote_port) override;
+  Status SetUp(const std::string& app_id,
+               const std::string& args,
+               int local_port,
+               int remote_port) override;
 
-  virtual Status TearDown() override;
+  Status TearDown() override;
 
  private:
   friend class DeviceManager;

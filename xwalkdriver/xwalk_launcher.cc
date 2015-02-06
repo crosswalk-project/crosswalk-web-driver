@@ -59,7 +59,7 @@ const char* kCommonSwitches[] = {
 
 Status PrepareCommandLine(int port,
                           const Capabilities& capabilities,
-                          CommandLine* prepared_command,
+                          base::CommandLine* prepared_command,
                           base::ScopedTempDir* user_data_dir,
                           base::ScopedTempDir* extension_dir,
                           std::vector<std::string>* extension_bg_pages) {
@@ -72,7 +72,7 @@ Status PrepareCommandLine(int port,
                   base::StringPrintf("no xwalk binary at %" PRFilePath,
                                      program.value().c_str()));
   }
-  CommandLine command(program);
+  base::CommandLine command(program);
   Switches switches;
 
   switches.SetSwitch("remote-debugging-port", base::IntToString(port));
@@ -151,7 +151,7 @@ Status LaunchDesktopXwalk(
     const Capabilities& capabilities,
     ScopedVector<DevToolsEventListener>& devtools_event_listeners,
     scoped_ptr<Xwalk>* xwalk) {
-  CommandLine command(CommandLine::NO_PROGRAM);
+  base::CommandLine command(base::CommandLine::NO_PROGRAM);
   base::ScopedTempDir user_data_dir;
   base::ScopedTempDir extension_dir;
   std::vector<std::string> extension_bg_pages;
@@ -178,7 +178,7 @@ Status LaunchDesktopXwalk(
   base::ScopedFD devnull;
   //int devnull = -1;
   //base::ScopedFD scoped_devnull(&devnull);
-  if (!CommandLine::ForCurrentProcess()->HasSwitch("verbose")) {
+  if (!base::CommandLine::ForCurrentProcess()->HasSwitch("verbose")) {
     // Redirect stderr to /dev/null, so that Xwalk log spew doesn't confuse
     // users.
     //devnull = open("/dev/null", O_WRONLY);
@@ -321,15 +321,23 @@ Status LaunchTizenXwalk(
     scoped_ptr<Xwalk>* xwalk) {
   Status status(kOk);
   scoped_ptr<Device> device;
-  // In real tizen device, its device serial is always same as its
-  // net address.
+  int remote_port;
+  // TODO(wuyuehang): In real tizen device, its device serial is always
+  // same as its net address. So far when specific tizen devices by its
+  // debugger address we get a chance to dynamically change its DevTools
+  // port while on emulators we statically fix the remote port 9222. We
+  // may need to enable choosing a dynamical port features on emulators
+  // in the future.
   if (capabilities.device_serial.empty() && 
       capabilities.debugger_address.host().empty()) {
+    remote_port = 9222;
     status = device_manager->AcquireDevice(&device);
   } else if (!capabilities.device_serial.empty()) {
+    remote_port = 9222;
     status = device_manager->AcquireSpecificDevice(
         capabilities.device_serial, &device);
   } else {
+    remote_port = capabilities.debugger_address.port();
     status = device_manager->AcquireSpecificDevice(
         capabilities.debugger_address.host(), &device);
   }
@@ -337,13 +345,14 @@ Status LaunchTizenXwalk(
   if(status.IsError()) {
     return status;
   }
-  int remote_port = capabilities.debugger_address.port();
   Switches switches;
   status = device->SetUp(capabilities.tizen_app_id,
                                  switches.ToString(),
                                  local_port,
                                  remote_port);
 
+  if(status.IsError())
+    return status;
   scoped_ptr<DevToolsHttpClient> devtools_client;
   status = WaitForDevToolsAndCheckVersion(NetAddress(local_port),
                                           context_getter,

@@ -22,7 +22,7 @@ class FakeDevToolsClient : public StubDevToolsClient {
  public:
   explicit FakeDevToolsClient(const std::string& id)
       : id_(id), listener_(NULL) {}
-  virtual ~FakeDevToolsClient() {}
+  ~FakeDevToolsClient() override {}
 
   std::string PopSentCommand() {
     std::string command;
@@ -39,11 +39,11 @@ class FakeDevToolsClient : public StubDevToolsClient {
   }
 
   // Overridden from DevToolsClient:
-  virtual Status ConnectIfNecessary() override {
+  Status ConnectIfNecessary() override {
     return listener_->OnConnected(this);
   }
 
-  virtual Status SendCommandAndGetResult(
+  Status SendCommandAndGetResult(
       const std::string& method,
       const base::DictionaryValue& params,
       scoped_ptr<base::DictionaryValue>* result) override {
@@ -51,12 +51,12 @@ class FakeDevToolsClient : public StubDevToolsClient {
     return Status(kOk);
   }
 
-  virtual void AddListener(DevToolsEventListener* listener) override {
+  void AddListener(DevToolsEventListener* listener) override {
     CHECK(!listener_);
     listener_ = listener;
   }
 
-  virtual const std::string& GetId() override {
+  const std::string& GetId() override {
     return id_;
   }
 
@@ -81,10 +81,10 @@ struct LogEntry {
 
 class FakeLog : public Log {
  public:
-  virtual void AddEntryTimestamped(const base::Time& timestamp,
-                                   Level level,
-                                   const std::string& source,
-                                   const std::string& message) override;
+  void AddEntryTimestamped(const base::Time& timestamp,
+                           Level level,
+                           const std::string& source,
+                           const std::string& message) override;
 
   const ScopedVector<LogEntry>& GetEntries() {
     return entries_;

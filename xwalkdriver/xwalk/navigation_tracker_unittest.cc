@@ -143,9 +143,9 @@ namespace {
 
 class FailToEvalScriptDevToolsClient : public StubDevToolsClient {
  public:
-  virtual ~FailToEvalScriptDevToolsClient() {}
+  ~FailToEvalScriptDevToolsClient() override {}
 
-  virtual Status SendCommandAndGetResult(
+  Status SendCommandAndGetResult(
       const std::string& method,
       const base::DictionaryValue& params,
       scoped_ptr<base::DictionaryValue>* result) override {
@@ -176,9 +176,9 @@ class DeterminingLoadStateDevToolsClient : public StubDevToolsClient {
         send_event_first_(send_event_first),
         send_event_first_params_(send_event_first_params) {}
 
-  virtual ~DeterminingLoadStateDevToolsClient() {}
+  ~DeterminingLoadStateDevToolsClient() override {}
 
-  virtual Status SendCommandAndGetResult(
+  Status SendCommandAndGetResult(
       const std::string& method,
       const base::DictionaryValue& params,
       scoped_ptr<base::DictionaryValue>* result) override {

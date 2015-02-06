@@ -78,9 +78,8 @@ void WebSocket::Connect(const net::CompletionCallback& callback) {
       return;
     }
   }
-  int port = 80;
-  base::StringToInt(url_.port(), &port);
-  net::AddressList addresses(net::IPEndPoint(address, port));
+  net::AddressList addresses(
+      net::IPEndPoint(address, static_cast<uint16>(url_.EffectiveIntPort())));
   net::NetLog::Source source;
   socket_.reset(new net::TCPClientSocket(addresses, NULL, source));
 
@@ -210,8 +209,8 @@ void WebSocket::OnReadDuringHandshake(const char* data, int len) {
 
   const char kMagicKey[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
   std::string websocket_accept;
-  base::Base64Encode(base::SHA1HashString(sec_key_ + kMagicKey), 
-                           &websocket_accept);
+  base::Base64Encode(base::SHA1HashString(sec_key_ + kMagicKey),
+                     &websocket_accept);
   scoped_refptr<net::HttpResponseHeaders> headers(
       new net::HttpResponseHeaders(
           net::HttpUtil::AssembleRawHeaders(
@@ -262,5 +261,3 @@ void WebSocket::Close(int code) {
 
   state_ = CLOSED;
 }
-
-

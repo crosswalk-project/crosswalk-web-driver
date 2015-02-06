@@ -47,10 +47,10 @@ namespace {
 class DetachXwalk : public StubXwalk {
  public:
   DetachXwalk() : quit_called_(false) {}
-  virtual ~DetachXwalk() {}
+  ~DetachXwalk() override {}
 
   // Overridden from Xwalk:
-  virtual Status Quit() override {
+  Status Quit() override {
     quit_called_ = true;
     return Status(kOk);
   }
@@ -95,10 +95,10 @@ namespace {
 class FailsToQuitXwalk : public StubXwalk {
  public:
   FailsToQuitXwalk() {}
-  virtual ~FailsToQuitXwalk() {}
+  ~FailsToQuitXwalk() override {}
 
   // Overridden from Xwalk:
-  virtual Status Quit() override {
+  Status Quit() override {
     return Status(kUnknownError);
   }
 };

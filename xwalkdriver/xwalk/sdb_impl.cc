@@ -14,6 +14,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_tokenizer.h"
+#include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/time/time.h"
@@ -83,13 +84,39 @@ SdbImpl::~SdbImpl() {}
 bool SdbImpl::IsTizenAppRunning(
     const std::string& device_serial,
     const std::string& app_id) {
-  std::string  response;
-  std::string app_launcher_cmd = "su - app -c \"app_launcher -S\"";
+  std::string response;
+  std::string cmd = "su - " + username_ + " -c \"app_launcher -S\"";
 
   Status status = ExecuteHostShellCommand(
-      device_serial, app_launcher_cmd, &response);
+      device_serial, cmd, &response);
 
   return (response.find(app_id) != std::string::npos);
+}
+
+Status SdbImpl::DetectUserAccountName(
+    const std::string& device_serial) {
+  std::string response;
+  std::string cmd = "su -c \"hostnamectl status\"";
+
+  Status status = ExecuteHostShellCommand(
+      device_serial, cmd, &response);
+
+  if (!status.IsOk())
+    return status;
+
+  VLOG(0) << response;
+
+  std::string result = base::StringToLowerASCII(response);
+  if (result.find("ivi") != std::string::npos)
+    username_ = "app";
+  else if (result.find("common") != std::string::npos)
+    // Statically choose user account "alice" as xwalkdriver debugging instance
+    username_ = "alice";
+  else
+    username_ = "app";
+
+  VLOG(0) << "Choosing user account: " << username_;
+  return Status(kOk);
 }
 
 Status SdbImpl::GetDevices(std::vector<std::string>* devices) {
@@ -140,11 +167,11 @@ Status SdbImpl::CheckAppInstalled(
     const std::string& device_serial, 
     const std::string& app_id) {
   std::string response;
-  std::string app_launcher_cmd = "su - app -c \"app_launcher -l\"";
+  std::string cmd = "su - " + username_ + " -c \"app_launcher -l\"";
 
   Status status = ExecuteHostShellCommand(
-      device_serial, app_launcher_cmd, &response);
-  printf (">>>>>>>> SdbImpl::CheckInstall %s \n", status.message().c_str());
+      device_serial, cmd, &response);
+  printf(">>>>>>>> SdbImpl::CheckInstall %s \n", status.message().c_str());
  
   if (response.find(app_id) == std::string::npos)
     return Status(kUnknownError,
@@ -178,11 +205,11 @@ Status SdbImpl::Launch(
         "Failed to re-launch " + app_id + " on device " + device_serial);
 
   std::string response;
-  std::string app_launcher_cmd = "su - app -c \" "\
+  std::string cmd = "su - " + username_ + " -c \" "\
       "app_launcher -s " + app_id + " -d \"";
 
   status = ExecuteHostShellCommand(
-      device_serial, app_launcher_cmd, &response);
+      device_serial, cmd, &response);
 
   printf (">>>>>>>> SdbImpl::launched \n");
   if (status.IsError())
@@ -195,9 +222,9 @@ Status SdbImpl::ForceStop(
     const std::string& device_serial, 
     const std::string& app_id) {
   std::string response;
-  std::string app_launcher_cmd = "su - app -c \" "\
+  std::string cmd = "su - " + username_ + " -c \" "\
       "app_launcher -k " + app_id + " \"";
-  return  ExecuteHostShellCommand(device_serial, app_launcher_cmd, &response);
+  return  ExecuteHostShellCommand(device_serial, cmd, &response);
 }
 
 Status SdbImpl::GetPidByName(

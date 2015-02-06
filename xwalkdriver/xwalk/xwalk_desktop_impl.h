@@ -16,6 +16,7 @@
 
 namespace base {
 class TimeDelta;
+class CommandLine;
 }
 
 class DevToolsHttpClient;
@@ -29,9 +30,9 @@ class XwalkDesktopImpl : public XwalkImpl {
       ScopedVector<DevToolsEventListener>& devtools_event_listeners,
       scoped_ptr<PortReservation> port_reservation,
       base::ProcessHandle process,
-      const CommandLine& command,
+      const base::CommandLine& command,
       base::ScopedTempDir* extension_dir);
-  virtual ~XwalkDesktopImpl();
+  ~XwalkDesktopImpl() override;
 
   // Waits for a page with the given URL to appear and finish loading.
   // Returns an error if the timeout is exceeded.
@@ -40,17 +41,17 @@ class XwalkDesktopImpl : public XwalkImpl {
                            scoped_ptr<WebView>* web_view);
 
   // Overridden from Xwalk
-  virtual XwalkDesktopImpl* GetAsDesktop() override;
-  virtual std::string GetOperatingSystemName() override;
+  XwalkDesktopImpl* GetAsDesktop() override;
+  std::string GetOperatingSystemName() override;
 
   // Overridden from XwalkImpl:
-  virtual Status QuitImpl() override;
+  Status QuitImpl() override;
 
-  const CommandLine& command() const;
+  const base::CommandLine& command() const;
 
  private:
   base::ProcessHandle process_;
-  CommandLine command_;
+  base::CommandLine command_;
   base::ScopedTempDir extension_dir_;
 };
 

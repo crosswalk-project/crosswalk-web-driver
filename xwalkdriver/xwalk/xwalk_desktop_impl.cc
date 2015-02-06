@@ -56,7 +56,7 @@ XwalkDesktopImpl::XwalkDesktopImpl(
     ScopedVector<DevToolsEventListener>& devtools_event_listeners,
     scoped_ptr<PortReservation> port_reservation,
     base::ProcessHandle process,
-    const CommandLine& command,
+    const base::CommandLine& command,
     base::ScopedTempDir* extension_dir)
     : XwalkImpl(client.Pass(),
                  devtools_event_listeners,
@@ -127,6 +127,6 @@ Status XwalkDesktopImpl::QuitImpl() {
   return Status(kOk);
 }
 
-const CommandLine& XwalkDesktopImpl::command() const {
+const base::CommandLine& XwalkDesktopImpl::command() const {
   return command_;
 }

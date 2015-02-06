@@ -76,7 +76,7 @@ su - app
 systemctl --user status xwalk
 pkgcmd -i -t xpk -q -p /home/app/webapi.xpk
 
-(4) Set remote debug port by insert "--remote-debugging-port='PORT'" into "/usr/lib/systemd/user/xwalk.service" on Tizen IVI.
+(4) Set remote debug port by insert "--remote-debugging-port=9222" into "/usr/lib/systemd/user/xwalk.service" on Tizen IVI.
 
 (5) Restart the xwalk.service on Tizen IVI:
 systemctl --user daemon-reload
@@ -97,7 +97,7 @@ $ python
 >>> 
 capabilities = {
   'xwalkOptions': {
-    'tizenDebuggerAddress': '10.238.158.97:9333',
+    'tizenDebuggerAddress': '10.238.158.97:9222',
     'tizenAppId': 'xwalk.ihogjblnkegkonaaaddobhoncmdpbomi',
     'sdb-port': 26099(default option if not selected),
   }

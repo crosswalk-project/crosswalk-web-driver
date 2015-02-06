@@ -21,13 +21,13 @@ class XwalkAndroidImpl : public XwalkImpl {
       ScopedVector<DevToolsEventListener>& devtools_event_listeners,
       scoped_ptr<PortReservation> port_reservation,
       scoped_ptr<Device> device);
-  virtual ~XwalkAndroidImpl();
+  ~XwalkAndroidImpl() override;
 
   // Overridden from Xwalk
-  virtual std::string GetOperatingSystemName() override;
+  std::string GetOperatingSystemName() override;
 
   // Overridden from XwalkImpl:
-  virtual Status QuitImpl() override;
+  Status QuitImpl() override;
 
  private:
   scoped_ptr<Device> device_;

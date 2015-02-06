@@ -18,13 +18,13 @@ class XwalkExistingImpl : public XwalkImpl {
   XwalkExistingImpl(
       scoped_ptr<DevToolsHttpClient> client,
       ScopedVector<DevToolsEventListener>& devtools_event_listeners);
-  virtual ~XwalkExistingImpl();
+  ~XwalkExistingImpl() override;
 
   // Overridden from Xwalk.
-  virtual std::string GetOperatingSystemName() override;
+  std::string GetOperatingSystemName() override;
 
   // Overridden from XwalkImpl.
-  virtual Status QuitImpl() override;
+  Status QuitImpl() override;
 };
 
 #endif  // XWALK_TEST_XWALKDRIVER_XWALK_XWALK_EXISTING_IMPL_H_

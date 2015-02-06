@@ -31,7 +31,7 @@ class DummyDevToolsClient : public StubDevToolsClient {
         uid_(1),
         cleared_(false),
         disabled_(false) {}
-  virtual ~DummyDevToolsClient() {}
+  ~DummyDevToolsClient() override {}
 
   bool IsCleared() { return cleared_; }
 
@@ -58,8 +58,8 @@ class DummyDevToolsClient : public StubDevToolsClient {
   }
 
   // Overridden from DevToolsClient:
-  virtual Status SendCommand(const std::string& method,
-                             const base::DictionaryValue& params) override {
+  Status SendCommand(const std::string& method,
+                     const base::DictionaryValue& params) override {
     if (!cleared_)
       cleared_ = method == "HeapProfiler.clearProfiles";
     if (!disabled_)
@@ -152,10 +152,10 @@ namespace {
 class TwoUidEventClient : public DummyDevToolsClient {
  public:
   TwoUidEventClient() : DummyDevToolsClient("", false) {}
-  virtual ~TwoUidEventClient() {}
+  ~TwoUidEventClient() override {}
 
   // Overridden from DummyDevToolsClient:
-  virtual Status SendAddProfileHeaderEvent() override {
+  Status SendAddProfileHeaderEvent() override {
     Status status = DummyDevToolsClient::SendAddProfileHeaderEvent();
     if (status.IsError())
       return status;
@@ -184,10 +184,10 @@ namespace {
 class ChunkWithDifferentUidClient : public DummyDevToolsClient {
  public:
   ChunkWithDifferentUidClient() : DummyDevToolsClient("", false) {}
-  virtual ~ChunkWithDifferentUidClient() {}
+  ~ChunkWithDifferentUidClient() override {}
 
   // Overridden from DummyDevToolsClient:
-  virtual Status SendAddHeapSnapshotChunkEvent() override {
+  Status SendAddHeapSnapshotChunkEvent() override {
     Status status = DummyDevToolsClient::SendAddHeapSnapshotChunkEvent();
     if (status.IsError())
       return status;

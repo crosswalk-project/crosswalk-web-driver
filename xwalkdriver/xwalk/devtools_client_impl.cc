@@ -19,7 +19,7 @@
 
 namespace {
 
-const char* kInspectorContextError =
+const char kInspectorContextError[] =
     "Execution context with given id not found.";
 
 Status ParseInspectorError(const std::string& error_json) {
@@ -50,6 +50,10 @@ class ScopedIncrementer {
 
 Status ConditionIsMet(bool* is_condition_met) {
   *is_condition_met = true;
+  return Status(kOk);
+}
+
+Status FakeCloseFrontends() {
   return Status(kOk);
 }
 
@@ -143,7 +147,14 @@ Status DevToolsClientImpl::SendCommand(
     const std::string& method,
     const base::DictionaryValue& params) {
   scoped_ptr<base::DictionaryValue> result;
-  return SendCommandInternal(method, params, &result);
+  return SendCommandInternal(method, params, &result, true);
+}
+
+Status DevToolsClientImpl::SendAsyncCommand(
+    const std::string& method,
+    const base::DictionaryValue& params) {
+  scoped_ptr<base::DictionaryValue> result;
+  return SendCommandInternal(method, params, &result, false);
 }
 
 Status DevToolsClientImpl::SendCommandAndGetResult(
@@ -151,7 +162,8 @@ Status DevToolsClientImpl::SendCommandAndGetResult(
     const base::DictionaryValue& params,
     scoped_ptr<base::DictionaryValue>* result) {
   scoped_ptr<base::DictionaryValue> intermediate_result;
-  Status status = SendCommandInternal(method, params, &intermediate_result);
+  Status status = SendCommandInternal(
+      method, params, &intermediate_result, true);
   if (status.IsError())
     return status;
   if (!intermediate_result)
@@ -201,7 +213,8 @@ DevToolsClientImpl::ResponseInfo::~ResponseInfo() {}
 Status DevToolsClientImpl::SendCommandInternal(
     const std::string& method,
     const base::DictionaryValue& params,
-    scoped_ptr<base::DictionaryValue>* result) {
+    scoped_ptr<base::DictionaryValue>* result,
+    bool wait_for_response) {
   if (!socket_->IsConnected())
     return Status(kDisconnected, "not connected to DevTools");
 
@@ -218,27 +231,29 @@ Status DevToolsClientImpl::SendCommandInternal(
   if (!socket_->Send(message))
     return Status(kDisconnected, "unable to send message to renderer");
 
-  linked_ptr<ResponseInfo> response_info =
-      make_linked_ptr(new ResponseInfo(method));
-  response_info_map_[command_id] = response_info;
-  while (response_info->state == kWaiting) {
-    Status status = ProcessNextMessage(
-        command_id, base::TimeDelta::FromMinutes(10));
-    if (status.IsError()) {
-      if (response_info->state == kReceived)
-        response_info_map_.erase(command_id);
-      return status;
+  if (wait_for_response) {
+    linked_ptr<ResponseInfo> response_info =
+        make_linked_ptr(new ResponseInfo(method));
+    response_info_map_[command_id] = response_info;
+    while (response_info->state == kWaiting) {
+      Status status = ProcessNextMessage(
+          command_id, base::TimeDelta::FromMinutes(10));
+      if (status.IsError()) {
+        if (response_info->state == kReceived)
+          response_info_map_.erase(command_id);
+        return status;
+      }
     }
+    if (response_info->state == kBlocked) {
+      response_info->state = kIgnored;
+      return Status(kUnexpectedAlertOpen);
+    }
+    CHECK_EQ(response_info->state, kReceived);
+    internal::InspectorCommandResponse& response = response_info->response;
+    if (!response.result)
+      return ParseInspectorError(response.error);
+    *result = response.result.Pass();
   }
-  if (response_info->state == kBlocked) {
-    response_info->state = kIgnored;
-    return Status(kUnexpectedAlertOpen);
-  }
-  CHECK_EQ(response_info->state, kReceived);
-  internal::InspectorCommandResponse& response = response_info->response;
-  if (!response.result)
-    return ParseInspectorError(response.error);
-  *result = response.result.Pass();
   return Status(kOk);
 }
 
@@ -257,10 +272,14 @@ Status DevToolsClientImpl::ProcessNextMessage(
   if (status.IsError())
     return status;
 
-  // The command response may have already been received or blocked while
-  // notifying listeners.
-  if (expected_id != -1 && response_info_map_[expected_id]->state != kWaiting)
-    return Status(kOk);
+  // The command response may have already been received (in which case it will
+  // have been deleted from |response_info_map_|) or blocked while notifying
+  // listeners.
+  if (expected_id != -1) {
+    ResponseInfoMap::iterator iter = response_info_map_.find(expected_id);
+    if (iter == response_info_map_.end() || iter->second->state != kWaiting)
+      return Status(kOk);
+  }
 
   if (crashed_)
     return Status(kTabCrashed);
@@ -363,12 +382,9 @@ Status DevToolsClientImpl::ProcessCommandResponse(
     return Status(kUnknownError, "unexpected command response");
 
   linked_ptr<ResponseInfo> response_info = response_info_map_[response.id];
-  if (response_info->state == kReceived)
-    return Status(kUnknownError, "received multiple command responses");
+  response_info_map_.erase(response.id);
 
-  if (response_info->state == kIgnored) {
-    response_info_map_.erase(response.id);
-  } else {
+  if (response_info->state != kIgnored) {
     response_info->state = kReceived;
     response_info->response.id = response.id;
     response_info->response.error = response.error;

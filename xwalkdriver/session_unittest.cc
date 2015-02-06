@@ -17,10 +17,10 @@ namespace {
 class MockXwalk : public StubXwalk {
  public:
   MockXwalk() : web_view_("1") {}
-  virtual ~MockXwalk() {}
+  ~MockXwalk() override {}
 
-  virtual Status GetWebViewById(const std::string& id,
-                                WebView** web_view) override {
+  Status GetWebViewById(const std::string& id,
+                        WebView** web_view) override {
     if (id == web_view_.GetId()) {
       *web_view = &web_view_;
       return Status(kOk);
