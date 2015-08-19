@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_DEVTOOLS_CLIENT_IMPL_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_DEVTOOLS_CLIENT_IMPL_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_DEVTOOLS_CLIENT_IMPL_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_DEVTOOLS_CLIENT_IMPL_H_
 
 #include <list>
 #include <map>
@@ -14,9 +14,9 @@
 #include "base/compiler_specific.h"
 #include "base/memory/linked_ptr.h"
 #include "base/memory/scoped_ptr.h"
-#include "url/gurl.h"
-#include "xwalk/test/xwalkdriver/net/sync_websocket_factory.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_client.h"
+#include "xwalk/test/xwalkdriver/net/sync_websocket_factory.h"
+#include "url/gurl.h"
 
 namespace base {
 class DictionaryValue;
@@ -52,6 +52,12 @@ class SyncWebSocket;
 
 class DevToolsClientImpl : public DevToolsClient {
  public:
+  static const char kBrowserwideDevToolsClientId[];
+
+  DevToolsClientImpl(const SyncWebSocketFactory& factory,
+                     const std::string& url,
+                     const std::string& id);
+
   typedef base::Callback<Status()> FrontendCloserFunc;
   DevToolsClientImpl(const SyncWebSocketFactory& factory,
                      const std::string& url,
@@ -70,25 +76,28 @@ class DevToolsClientImpl : public DevToolsClient {
                      const FrontendCloserFunc& frontend_closer_func,
                      const ParserFunc& parser_func);
 
-  virtual ~DevToolsClientImpl();
+  ~DevToolsClientImpl() override;
 
   void SetParserFuncForTesting(const ParserFunc& parser_func);
 
   // Overridden from DevToolsClient:
-  virtual const std::string& GetId() override;
-  virtual bool WasCrashed() override;
-  virtual Status ConnectIfNecessary() override;
-  virtual Status SendCommand(const std::string& method,
-                             const base::DictionaryValue& params) override;
-  virtual Status SendCommandAndGetResult(
+  const std::string& GetId() override;
+  bool WasCrashed() override;
+  Status ConnectIfNecessary() override;
+  Status SendCommand(
+      const std::string& method,
+      const base::DictionaryValue& params) override;
+  Status SendAsyncCommand(
+      const std::string& method,
+      const base::DictionaryValue& params) override;
+  Status SendCommandAndGetResult(
       const std::string& method,
       const base::DictionaryValue& params,
       scoped_ptr<base::DictionaryValue>* result) override;
-  virtual void AddListener(DevToolsEventListener* listener) override;
-  virtual Status HandleEventsUntil(
-      const ConditionalFunc& conditional_func,
-      const base::TimeDelta& timeout) override;
-  virtual Status HandleReceivedEvents() override;
+  void AddListener(DevToolsEventListener* listener) override;
+  Status HandleEventsUntil(const ConditionalFunc& conditional_func,
+                           const base::TimeDelta& timeout) override;
+  Status HandleReceivedEvents() override;
 
  private:
   enum ResponseState {
@@ -115,7 +124,8 @@ class DevToolsClientImpl : public DevToolsClient {
   Status SendCommandInternal(
       const std::string& method,
       const base::DictionaryValue& params,
-      scoped_ptr<base::DictionaryValue>* result);
+      scoped_ptr<base::DictionaryValue>* result,
+      bool wait_for_response);
   Status ProcessNextMessage(int expected_id, const base::TimeDelta& timeout);
   Status ProcessEvent(const internal::InspectorEvent& event);
   Status ProcessCommandResponse(
@@ -154,4 +164,4 @@ bool ParseInspectorMessage(
 
 }  // namespace internal
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_DEVTOOLS_CLIENT_IMPL_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_DEVTOOLS_CLIENT_IMPL_H_

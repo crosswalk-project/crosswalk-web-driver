@@ -6,19 +6,24 @@
 
 #include "base/strings/stringprintf.h"
 #include "base/values.h"
+#include "xwalk/test/xwalkdriver/xwalk/browser_info.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 
-NavigationTracker::NavigationTracker(DevToolsClient* client)
+NavigationTracker::NavigationTracker(DevToolsClient* client,
+                                     const BrowserInfo* browser_info)
     : client_(client),
-      loading_state_(kUnknown) {
+      loading_state_(kUnknown),
+      browser_info_(browser_info) {
   client_->AddListener(this);
 }
 
 NavigationTracker::NavigationTracker(DevToolsClient* client,
-                                     LoadingState known_state)
+                                     LoadingState known_state,
+                                     const BrowserInfo* browser_info)
     : client_(client),
-      loading_state_(known_state) {
+      loading_state_(known_state),
+      browser_info_(browser_info) {
   client_->AddListener(this);
 }
 
@@ -27,6 +32,23 @@ NavigationTracker::~NavigationTracker() {}
 Status NavigationTracker::IsPendingNavigation(const std::string& frame_id,
                                               bool* is_pending) {
   if (loading_state_ == kUnknown) {
+    scoped_ptr<base::DictionaryValue> result;
+
+    // In the case that a http request is sent to server to fetch the page
+    // content and the server hasn't responded at all, a dummy page is created
+    // for the new window. In such case, the baseURL will be empty.
+    base::DictionaryValue empty_params;
+    Status status = client_->SendCommandAndGetResult(
+        "DOM.getDocument", empty_params, &result);
+    std::string base_url;
+    if (status.IsError() || !result->GetString("root.baseURL", &base_url))
+      return Status(kUnknownError, "cannot determine loading status", status);
+    if (base_url.empty()) {
+      *is_pending = true;
+      loading_state_ = kLoading;
+      return Status(kOk);
+    }
+
     // If the loading state is unknown (which happens after first connecting),
     // force loading to start and set the state to loading. This will
     // cause a frame start event to be received, and the frame stop event
@@ -47,8 +69,7 @@ Status NavigationTracker::IsPendingNavigation(const std::string& frame_id,
        "}";
     base::DictionaryValue params;
     params.SetString("expression", kStartLoadingIfMainFrameNotLoading);
-    scoped_ptr<base::DictionaryValue> result;
-    Status status = client_->SendCommandAndGetResult(
+    status = client_->SendCommandAndGetResult(
         "Runtime.evaluate", params, &result);
     if (status.IsError())
       return Status(kUnknownError, "cannot determine loading status", status);
@@ -61,16 +82,18 @@ Status NavigationTracker::IsPendingNavigation(const std::string& frame_id,
       loading_state_ = kLoading;
   }
   *is_pending = loading_state_ == kLoading;
-  if (frame_id.empty())
+  if (frame_id.empty()) {
     *is_pending |= scheduled_frame_set_.size() > 0;
-  else
+    *is_pending |= pending_frame_set_.size() > 0;
+  } else {
     *is_pending |= scheduled_frame_set_.count(frame_id) > 0;
+    *is_pending |= pending_frame_set_.count(frame_id) > 0;
+  }
   return Status(kOk);
 }
 
 Status NavigationTracker::OnConnected(DevToolsClient* client) {
-  loading_state_ = kUnknown;
-  scheduled_frame_set_.clear();
+  ResetLoadingState(kUnknown);
 
   // Enable page domain notifications to allow tracking navigation state.
   base::DictionaryValue empty_params;
@@ -80,13 +103,44 @@ Status NavigationTracker::OnConnected(DevToolsClient* client) {
 Status NavigationTracker::OnEvent(DevToolsClient* client,
                                   const std::string& method,
                                   const base::DictionaryValue& params) {
-  // Xwalk does not send Page.frameStoppedLoading until all frames have
-  // run their onLoad handlers (including frames created during the handlers).
-  // When it does, it only sends one stopped event for all frames.
   if (method == "Page.frameStartedLoading") {
+    std::string frame_id;
+    if (!params.GetString("frameId", &frame_id))
+      return Status(kUnknownError, "missing or invalid 'frameId'");
+    pending_frame_set_.insert(frame_id);
     loading_state_ = kLoading;
   } else if (method == "Page.frameStoppedLoading") {
-    loading_state_ = kNotLoading;
+    // Versions of Blink before revision 170248 sent a single
+    // Page.frameStoppedLoading event per page, but 170248 and newer revisions
+    // only send one event for each frame on the page.
+    //
+    // This change was rolled into the Chromium tree in revision 260203.
+    // Versions of Xwalk with build number 1916 and earlier do not contain this
+    // change.
+    bool expecting_single_stop_event = false;
+
+    if (browser_info_->browser_name == "xwalk") {
+      // If we're talking to a version of Xwalk with an old build number, we
+      // are using a branched version of Blink which does not contain 170248
+      // (even if blink_revision > 170248).
+      expecting_single_stop_event = browser_info_->build_no <= 1916;
+    } else {
+      // If we're talking to a non-Xwalk embedder (e.g. Content Shell, Android
+      // WebView), assume that the browser does not use a branched version of
+      // Blink.
+      expecting_single_stop_event = browser_info_->blink_revision < 170248;
+    }
+
+    std::string frame_id;
+    if (!params.GetString("frameId", &frame_id))
+      return Status(kUnknownError, "missing or invalid 'frameId'");
+
+    pending_frame_set_.erase(frame_id);
+
+    if (pending_frame_set_.empty() || expecting_single_stop_event) {
+      pending_frame_set_.clear();
+      loading_state_ = kNotLoading;
+    }
   } else if (method == "Page.frameScheduledNavigation") {
     double delay;
     if (!params.GetDouble("delay", &delay))
@@ -115,36 +169,40 @@ Status NavigationTracker::OnEvent(DevToolsClient* client,
     // received when navigating.
     // See crbug.com/180742.
     const base::Value* unused_value;
-    if (!params.Get("frame.parentId", &unused_value))
+    if (!params.Get("frame.parentId", &unused_value)) {
+      pending_frame_set_.clear();
       scheduled_frame_set_.clear();
+    }
   } else if (method == "Inspector.targetCrashed") {
-    loading_state_ = kNotLoading;
-    scheduled_frame_set_.clear();
+    ResetLoadingState(kNotLoading);
   }
   return Status(kOk);
 }
 
 Status NavigationTracker::OnCommandSuccess(DevToolsClient* client,
                                            const std::string& method) {
-  if (method == "Page.navigate" && loading_state_ != kLoading) {
+  if ((method == "Page.navigate" || method == "Page.navigateToHistoryEntry") &&
+      loading_state_ != kLoading) {
     // At this point the browser has initiated the navigation, but besides that,
     // it is unknown what will happen.
     //
     // There are a few cases (perhaps more):
-    // 1 The RenderViewHost has already queued ViewMsg_Navigate and loading
+    // 1 The RenderFrameHost has already queued FrameMsg_Navigate and loading
     //   will start shortly.
-    // 2 The RenderViewHost has already queued ViewMsg_Navigate and loading
+    // 2 The RenderFrameHost has already queued FrameMsg_Navigate and loading
     //   will never start because it is just an in-page fragment navigation.
-    // 3 The RenderViewHost is suspended and hasn't queued ViewMsg_Navigate
-    //   yet. This happens for cross-site navigations. The RenderViewHost
-    //   will not queue ViewMsg_Navigate until it is ready to unload the
+    // 3 The RenderFrameHost is suspended and hasn't queued FrameMsg_Navigate
+    //   yet. This happens for cross-site navigations. The RenderFrameHost
+    //   will not queue FrameMsg_Navigate until it is ready to unload the
     //   previous page (after running unload handlers and such).
+    // TODO(nasko): Revisit case 3, since now unload handlers are run in the
+    // background. http://crbug.com/323528.
     //
     // To determine whether a load is expected, do a round trip to the
     // renderer to ask what the URL is.
     // If case #1, by the time the command returns, the frame started to load
     // event will also have been received, since the DevTools command will
-    // be queued behind ViewMsg_Navigate.
+    // be queued behind FrameMsg_Navigate.
     // If case #2, by the time the command returns, the navigation will
     // have already happened, although no frame start/stop events will have
     // been received.
@@ -163,4 +221,10 @@ Status NavigationTracker::OnCommandSuccess(DevToolsClient* client,
       loading_state_ = kLoading;
   }
   return Status(kOk);
+}
+
+void NavigationTracker::ResetLoadingState(LoadingState loading_state) {
+  loading_state_ = loading_state;
+  pending_frame_set_.clear();
+  scheduled_frame_set_.clear();
 }

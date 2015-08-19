@@ -9,7 +9,7 @@
 namespace {
 
 // This variable must be able to be found and parsed by the upload script.
-const int kMinimumSupportedXwalkVersion[] = {29, 0, 1545, 0};
+const int kMinimumSupportedXwalkVersion[] = {40, 0, 2214, 0};
 
 }  // namespace
 

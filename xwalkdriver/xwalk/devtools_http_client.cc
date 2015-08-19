@@ -4,32 +4,20 @@
 
 #include "xwalk/test/xwalkdriver/xwalk/devtools_http_client.h"
 
-#include <list>
-
 #include "base/bind.h"
 #include "base/bind_helpers.h"
 #include "base/json/json_reader.h"
-#include "base/strings/string_number_conversions.h"
-#include "base/strings/string_split.h"
 #include "base/strings/stringprintf.h"
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
 #include "base/values.h"
-#include "xwalk/test/xwalkdriver/net/net_util.h"
-#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
+#include "xwalk/test/xwalkdriver/xwalk/device_metrics.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_client_impl.h"
 #include "xwalk/test/xwalkdriver/xwalk/log.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/xwalk/version.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view_impl.h"
-
-namespace {
-
-Status FakeCloseFrontends() {
-  return Status(kOk);
-}
-
-}  // namespace
+#include "xwalk/test/xwalkdriver/net/net_util.h"
+#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 
 WebViewInfo::WebViewInfo(const std::string& id,
                          const std::string& debugger_url,
@@ -40,7 +28,7 @@ WebViewInfo::WebViewInfo(const std::string& id,
 WebViewInfo::~WebViewInfo() {}
 
 bool WebViewInfo::IsFrontend() const {
-  return url.find("chrome-devtools://") == 0u;
+  return url.find("xwalk-devtools://") == 0u;
 }
 
 WebViewsInfo::WebViewsInfo() {}
@@ -69,63 +57,30 @@ const WebViewInfo* WebViewsInfo::GetForId(const std::string& id) const {
 DevToolsHttpClient::DevToolsHttpClient(
     const NetAddress& address,
     scoped_refptr<URLRequestContextGetter> context_getter,
-    const SyncWebSocketFactory& socket_factory)
+    const SyncWebSocketFactory& socket_factory,
+    scoped_ptr<DeviceMetrics> device_metrics)
     : context_getter_(context_getter),
       socket_factory_(socket_factory),
       server_url_("http://" + address.ToString()),
       web_socket_url_prefix_(base::StringPrintf(
-          "ws://%s/devtools/page/", address.ToString().c_str())) {}
+          "ws://%s/devtools/page/", address.ToString().c_str())),
+      device_metrics_(device_metrics.Pass()) {}
 
 DevToolsHttpClient::~DevToolsHttpClient() {}
 
 Status DevToolsHttpClient::Init(const base::TimeDelta& timeout) {
   base::TimeTicks deadline = base::TimeTicks::Now() + timeout;
-  std::string devtools_version;
-  VLOG(0) << "DevTools server address is " + server_url_;
-  while (true) {
-    Status status = GetVersion(&devtools_version);
-    if (status.IsOk())
-      break;
-    if (status.code() != kXwalkNotReachable ||
-        base::TimeTicks::Now() > deadline) {
-      return status;
-    }
+  std::string version_url = server_url_ + "/json/version";
+  std::string data;
+
+  while (!FetchUrlAndLog(version_url, context_getter_.get(), &data)
+      || data.empty()) {
+    if (base::TimeTicks::Now() > deadline)
+      return Status(kXwalkNotReachable);
     base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(50));
   }
 
-  int kToTBuildNo = 9999;
-  if (devtools_version.empty()) {
-    // Content Shell has an empty product version and a fake user agent.
-    // There's no way to detect the actual version, so assume it is tip of tree.
-    version_ = "content shell";
-    build_no_ = kToTBuildNo;
-    return Status(kOk);
-  }
-  if (devtools_version.find("Version/") == 0u) {
-    version_ = "webview";
-    build_no_ = kToTBuildNo;
-    return Status(kOk);
-  }
-
-  std::string prefix = "Chrome/";
-  if (devtools_version.find(prefix) != 0u) {
-    return Status(kUnknownError,
-                  "unrecognized Crosswalk version: " + devtools_version);
-  }
-
-  std::string stripped_version = devtools_version.substr(prefix.length());
-  int temp_build_no;
-  std::vector<std::string> version_parts;
-  base::SplitString(stripped_version, '.', &version_parts);
-  if (version_parts.size() != 4 ||
-      !base::StringToInt(version_parts[2], &temp_build_no)) {
-    return Status(kUnknownError,
-                  "unrecognized Crosswalk version: " + devtools_version);
-  }
-
-  version_ = stripped_version;
-  build_no_ = temp_build_no;
-  return Status(kOk);
+  return ParseBrowserInfo(data, &browser_info_);
 }
 
 Status DevToolsHttpClient::GetWebViewsInfo(WebViewsInfo* views_info) {
@@ -178,21 +133,12 @@ Status DevToolsHttpClient::ActivateWebView(const std::string& id) {
   return Status(kOk);
 }
 
-const std::string& DevToolsHttpClient::version() const {
-  return version_;
+const BrowserInfo* DevToolsHttpClient::browser_info() {
+  return &browser_info_;
 }
 
-int DevToolsHttpClient::build_no() const {
-  return build_no_;
-}
-
-Status DevToolsHttpClient::GetVersion(std::string* version) {
-  std::string data;
-  if (!FetchUrlAndLog(
-          server_url_ + "/json/version", context_getter_.get(), &data))
-    return Status(kXwalkNotReachable);
-
-  return internal::ParseVersionInfo(data, version);
+const DeviceMetrics* DevToolsHttpClient::device_metrics() {
+  return device_metrics_.get();
 }
 
 Status DevToolsHttpClient::CloseFrontends(const std::string& for_client_id) {
@@ -234,10 +180,9 @@ Status DevToolsHttpClient::CloseFrontends(const std::string& for_client_id) {
     scoped_ptr<DevToolsClient> client(new DevToolsClientImpl(
         socket_factory_,
         web_socket_url_prefix_ + *it,
-        *it,
-        base::Bind(&FakeCloseFrontends)));
+        *it));
     scoped_ptr<WebViewImpl> web_view(
-        new WebViewImpl(*it, build_no_, client.Pass()));
+        new WebViewImpl(*it, &browser_info_, client.Pass(), NULL));
 
     status = web_view->ConnectIfNecessary();
     // Ignore disconnected error, because the debugger might have closed when
@@ -246,10 +191,7 @@ Status DevToolsHttpClient::CloseFrontends(const std::string& for_client_id) {
       return status;
 
     scoped_ptr<base::Value> result;
-    status = web_view->EvaluateScript(
-        std::string(),
-        "document.querySelector('*[id^=\"close-button-\"]').click();",
-        &result);
+    status = CloseWebView(*it);
     // Ignore disconnected error, because it may be closed already.
     if (status.IsError() && status.code() != kDisconnected)
       return status;
@@ -289,8 +231,7 @@ bool DevToolsHttpClient::FetchUrlAndLog(const std::string& url,
 
 namespace internal {
 
-Status ParseWebViewsInfo(const std::string& data,
-                         WebViewsInfo* views_info) {
+Status ParseWebViewsInfo(const std::string& data, WebViewsInfo* views_info) {
   scoped_ptr<base::Value> value(base::JSONReader::Read(data));
   if (!value.get())
     return Status(kUnknownError, "DevTools returned invalid JSON");
@@ -315,39 +256,35 @@ Status ParseWebViewsInfo(const std::string& data,
     std::string debugger_url;
     info->GetString("webSocketDebuggerUrl", &debugger_url);
     WebViewInfo::Type type;
-    if (type_as_string == "app")
-      type = WebViewInfo::kApp;
-    else if (type_as_string == "background_page")
-      type = WebViewInfo::kBackgroundPage;
-    else if (type_as_string == "page")
-      type = WebViewInfo::kPage;
-    else if (type_as_string == "worker")
-      type = WebViewInfo::kWorker;
-    else if (type_as_string == "other")
-      type = WebViewInfo::kOther;
-    else
-      return Status(kUnknownError,
-                    "DevTools returned unknown type:" + type_as_string);
+    Status status = ParseType(type_as_string, &type);
+    if (status.IsError())
+      return status;
     temp_views_info.push_back(WebViewInfo(id, debugger_url, url, type));
   }
   *views_info = WebViewsInfo(temp_views_info);
   return Status(kOk);
 }
 
-Status ParseVersionInfo(const std::string& data,
-                        std::string* version) {
-  scoped_ptr<base::Value> value(base::JSONReader::Read(data));
-  if (!value.get())
-    return Status(kUnknownError, "version info not in JSON");
-  base::DictionaryValue* dict;
-  if (!value->GetAsDictionary(&dict))
-    return Status(kUnknownError, "version info not a dictionary");
-  if (!dict->GetString("Browser", version)) {
-    return Status(
-        kUnknownError,
-        "Xwalk version must be >= " + GetMinimumSupportedXwalkVersion(),
-        Status(kUnknownError, "version info doesn't include string 'Browser'"));
-  }
+Status ParseType(const std::string& type_as_string, WebViewInfo::Type* type) {
+  if (type_as_string == "app")
+    *type = WebViewInfo::kApp;
+  else if (type_as_string == "background_page")
+    *type = WebViewInfo::kBackgroundPage;
+  else if (type_as_string == "page")
+    *type = WebViewInfo::kPage;
+  else if (type_as_string == "worker")
+    *type = WebViewInfo::kWorker;
+  else if (type_as_string == "webview")
+    *type = WebViewInfo::kWebView;
+  else if (type_as_string == "iframe")
+    *type = WebViewInfo::kIFrame;
+  else if (type_as_string == "other")
+    *type = WebViewInfo::kOther;
+  else if (type_as_string == "service_worker")
+    *type = WebViewInfo::kServiceWorker;
+  else
+    return Status(kUnknownError,
+                  "DevTools returned unknown type:" + type_as_string);
   return Status(kOk);
 }
 

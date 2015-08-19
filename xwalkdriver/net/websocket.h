@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_NET_WEBSOCKET_H_
-#define XWALK_TEST_XWALKDRIVER_NET_WEBSOCKET_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_NET_WEBSOCKET_H_
+#define CHROME_TEST_CHROMEDRIVER_NET_WEBSOCKET_H_
 
 #include <string>
 
@@ -96,4 +96,4 @@ class WebSocketListener {
   virtual void OnClose() = 0;
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_NET_WEBSOCKET_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_NET_WEBSOCKET_H_

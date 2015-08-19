@@ -15,6 +15,7 @@ class _Method(object):
 class Command(object):
   NEW_SESSION = (_Method.POST, '/session')
   GET_SESSION_CAPABILITIES = (_Method.GET, '/session/:sessionId')
+  GET_SESSIONS = (_Method.GET, '/sessions')
   QUIT = (_Method.DELETE, '/session/:sessionId')
   GET_CURRENT_WINDOW_HANDLE = (_Method.GET, '/session/:sessionId/window_handle')
   GET_WINDOW_HANDLES = (_Method.GET, '/session/:sessionId/window_handles')
@@ -29,6 +30,7 @@ class Command(object):
   REFRESH = (_Method.POST, '/session/:sessionId/refresh')
   EXECUTE_SCRIPT = (_Method.POST, '/session/:sessionId/execute')
   EXECUTE_ASYNC_SCRIPT = (_Method.POST, '/session/:sessionId/execute_async')
+  LAUNCH_APP = (_Method.POST, '/session/:sessionId/chromium/launch_app')
   GET_CURRENT_URL = (_Method.GET, '/session/:sessionId/url')
   GET_TITLE = (_Method.GET, '/session/:sessionId/title')
   GET_PAGE_SOURCE = (_Method.GET, '/session/:sessionId/source')
@@ -65,6 +67,7 @@ class Command(object):
   ELEMENT_EQUALS = (
       _Method.GET, '/session/:sessionId/element/:id/equals/:other')
   GET_COOKIES = (_Method.GET, '/session/:sessionId/cookie')
+  GET_COOKIE = (_Method.GET, '/session/:sessionId/cookie/:name')
   ADD_COOKIE = (_Method.POST, '/session/:sessionId/cookie')
   DELETE_ALL_COOKIES = (_Method.DELETE, '/session/:sessionId/cookie')
   DELETE_COOKIE = (_Method.DELETE, '/session/:sessionId/cookie/:name')
@@ -93,6 +96,12 @@ class Command(object):
   EXECUTE_SQL = (_Method.POST, '/session/:sessionId/execute_sql')
   GET_LOCATION = (_Method.GET, '/session/:sessionId/location')
   SET_LOCATION = (_Method.POST, '/session/:sessionId/location')
+  GET_NETWORK_CONDITIONS = (
+      _Method.GET, '/session/:sessionId/chromium/network_conditions')
+  SET_NETWORK_CONDITIONS = (
+      _Method.POST, '/session/:sessionId/chromium/network_conditions')
+  DELETE_NETWORK_CONDITIONS = (
+      _Method.DELETE, '/session/:sessionId/chromium/network_conditions')
   GET_STATUS = (_Method.GET, '/session/:sessionId/application_cache/status')
   IS_BROWSER_ONLINE = (_Method.GET, '/session/:sessionId/browser_connection')
   SET_BROWSER_ONLINE = (_Method.POST, '/session/:sessionId/browser_connection')
@@ -134,11 +143,14 @@ class Command(object):
   TOUCH_FLICK = (_Method.POST, '/session/:sessionId/touch/flick')
   GET_LOG = (_Method.POST, '/session/:sessionId/log')
   GET_AVAILABLE_LOG_TYPES = (_Method.GET, '/session/:sessionId/log/types')
+  IS_AUTO_REPORTING = (_Method.GET, '/session/:sessionId/autoreport')
+  SET_AUTO_REPORTING = (_Method.POST, '/session/:sessionId/autoreport')
   GET_SESSION_LOGS = (_Method.POST, '/logs')
   STATUS = (_Method.GET, '/status')
 
   # Custom Xwalk commands.
   IS_LOADING = (_Method.GET, '/session/:sessionId/is_loading')
+  TOUCH_PINCH = (_Method.POST, '/session/:sessionId/touch/pinch')
 
 
 class CommandExecutor(object):
@@ -163,7 +175,7 @@ class CommandExecutor(object):
       body = json.dumps(params)
     self._http_client.request(command[0], '/'.join(substituted_parts), body)
     response = self._http_client.getresponse()
-
+ 
     if response.status == 303:
       self._http_client.request(_Method.GET, response.getheader('location'))
       response = self._http_client.getresponse()

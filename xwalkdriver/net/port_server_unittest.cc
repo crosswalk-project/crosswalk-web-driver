@@ -7,20 +7,20 @@
 #include "base/bind.h"
 #include "base/guid.h"
 #include "base/location.h"
-#include "base/message_loop/message_loop.h"
+#include "base/single_thread_task_runner.h"
 #include "base/sync_socket.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/thread.h"
 #include "base/time/time.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/net/port_server.h"
 #include "net/base/sys_addrinfo.h"
 #include "testing/gtest/include/gtest/gtest.h"
-#include "xwalk/test/xwalkdriver/net/port_server.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
 
 #if defined(OS_LINUX)
-#include <fcntl.h>  // NOLINT
-#include <sys/socket.h>  // NOLINT
-#include <sys/un.h>  // NOLINT
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #endif
 
 namespace {
@@ -124,10 +124,9 @@ class PortServerTest : public testing::Test {
                  const std::string& response,
                  std::string* request) {
     base::WaitableEvent listen_event(false, false);
-    thread_.message_loop()->PostTask(
+    thread_.task_runner()->PostTask(
         FROM_HERE,
-        base::Bind(
-            &RunServerOnThread, path, response, &listen_event, request));
+        base::Bind(&RunServerOnThread, path, response, &listen_event, request));
     ASSERT_TRUE(listen_event.TimedWait(base::TimeDelta::FromSeconds(5)));
   }
 
@@ -142,11 +141,11 @@ TEST_F(PortServerTest, Reserve) {
   std::string request;
   RunServer(path, "12345\n", &request);
 
-  int port = 0;
+  uint16 port = 0;
   scoped_ptr<PortReservation> reservation;
   Status status = server.ReservePort(&port, &reservation);
   ASSERT_EQ(kOk, status.code()) << status.message();
-  ASSERT_EQ(port, 12345);
+  ASSERT_EQ(12345u, port);
 }
 
 TEST_F(PortServerTest, ReserveResetReserve) {
@@ -156,16 +155,16 @@ TEST_F(PortServerTest, ReserveResetReserve) {
   std::string request;
   RunServer(path, "12345\n", &request);
 
-  int port = 0;
+  uint16 port = 0;
   scoped_ptr<PortReservation> reservation;
   Status status = server.ReservePort(&port, &reservation);
   ASSERT_EQ(kOk, status.code()) << status.message();
-  ASSERT_EQ(port, 12345);
+  ASSERT_EQ(12345u, port);
 
   reservation.reset();
   status = server.ReservePort(&port, &reservation);
   ASSERT_EQ(kOk, status.code()) << status.message();
-  ASSERT_EQ(port, 12345);
+  ASSERT_EQ(12345u, port);
 }
 
 TEST_F(PortServerTest, ReserveReserve) {
@@ -175,22 +174,22 @@ TEST_F(PortServerTest, ReserveReserve) {
   std::string request;
   RunServer(path, "12345\n", &request);
 
-  int port = 0;
+  uint16 port = 0;
   scoped_ptr<PortReservation> reservation;
   Status status = server.ReservePort(&port, &reservation);
   ASSERT_EQ(kOk, status.code()) << status.message();
-  ASSERT_EQ(port, 12345);
+  ASSERT_EQ(12345u, port);
 
   RunServer(path, "12346\n", &request);
   status = server.ReservePort(&port, &reservation);
   ASSERT_EQ(kOk, status.code()) << status.message();
-  ASSERT_EQ(port, 12346);
+  ASSERT_EQ(12346u, port);
 }
 #endif
 
-TEST(PortManagerTest, Reserve) {
+TEST(PortManagerTest, ReservePort) {
   PortManager mgr(15000, 16000);
-  int port = 0;
+  uint16 port = 0;
   scoped_ptr<PortReservation> reservation;
   Status status = mgr.ReservePort(&port, &reservation);
   ASSERT_EQ(kOk, status.code()) << status.message();
@@ -198,4 +197,20 @@ TEST(PortManagerTest, Reserve) {
   ASSERT_GE(port, 15000);
   ASSERT_LE(port, 16000);
   ASSERT_TRUE(reservation);
+}
+
+TEST(PortManagerTest, ReservePortFromPool) {
+  PortManager mgr(15000, 16000);
+  uint16 first_port = 0, port = 1;
+  for (int i = 0; i < 10; i++) {
+    scoped_ptr<PortReservation> reservation;
+    Status status = mgr.ReservePortFromPool(&port, &reservation);
+    ASSERT_EQ(kOk, status.code()) << status.message();
+    ASSERT_TRUE(reservation);
+    ASSERT_GE(port, 15000);
+    ASSERT_LE(port, 16000);
+    if (i == 0)
+      first_port = port;
+    ASSERT_EQ(port, first_port);
+  }
 }

@@ -6,9 +6,9 @@
 
 #include "base/compiler_specific.h"
 #include "base/values.h"
-#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_http_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
 
@@ -95,7 +95,10 @@ TEST(ParseWebViewsInfo, Types) {
   AssertTypeIsOk("background_page", WebViewInfo::kBackgroundPage);
   AssertTypeIsOk("page", WebViewInfo::kPage);
   AssertTypeIsOk("worker", WebViewInfo::kWorker);
+  AssertTypeIsOk("webview", WebViewInfo::kWebView);
+  AssertTypeIsOk("iframe", WebViewInfo::kIFrame);
   AssertTypeIsOk("other", WebViewInfo::kOther);
+  AssertTypeIsOk("service_worker", WebViewInfo::kServiceWorker);
   AssertFails("[{\"type\": \"\", \"id\": \"1\", \"url\": \"http://page1\"}]");
 }
 
@@ -142,34 +145,3 @@ TEST(ParseWebViewsInfo, InvalidUrl) {
       "[{\"type\": \"page\", \"id\": \"1\", \"url\": 1,"
       "  \"webSocketDebuggerUrl\": \"ws://debugurl1\"}]");
 }
-
-namespace {
-
-void AssertVersionFails(const std::string& data) {
-  std::string version;
-  Status status = internal::ParseVersionInfo(data, &version);
-  ASSERT_TRUE(status.IsError());
-  ASSERT_TRUE(version.empty());
-}
-
-}  // namespace
-
-TEST(ParseVersionInfo, InvalidJSON) {
-  AssertVersionFails("[");
-}
-
-TEST(ParseVersionInfo, NonDict) {
-  AssertVersionFails("[]");
-}
-
-TEST(ParseVersionInfo, NoBrowserKey) {
-  AssertVersionFails("{}");
-}
-
-TEST(ParseVersionInfo, Valid) {
-  std::string version;
-  Status status = internal::ParseVersionInfo("{\"Browser\": \"1\"}", &version);
-  ASSERT_TRUE(status.IsOk());
-  ASSERT_EQ("1", version);
-}
-

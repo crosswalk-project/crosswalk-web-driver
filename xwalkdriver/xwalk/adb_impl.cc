@@ -17,8 +17,8 @@
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/time/time.h"
-#include "xwalk/test/xwalkdriver/net/adb_client_socket.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/net/adb_client_socket.h"
 
 namespace {
 
@@ -97,8 +97,7 @@ Status AdbImpl::GetDevices(std::vector<std::string>* devices) {
 }
 
 Status AdbImpl::ForwardPort(
-    const std::string& device_serial, 
-    int local_port,
+    const std::string& device_serial, int local_port,
     const std::string& remote_abstract) {
   std::string response;
   Status status = ExecuteHostCommand(
@@ -114,11 +113,10 @@ Status AdbImpl::ForwardPort(
                 device_serial + ": " + response);
 }
 
-Status AdbImpl::SetCommandLineFile(
-    const std::string& device_serial,
-    const std::string& command_line_file,
-    const std::string& exec_name,
-    const std::string& args) {
+Status AdbImpl::SetCommandLineFile(const std::string& device_serial,
+                                   const std::string& command_line_file,
+                                   const std::string& exec_name,
+                                   const std::string& args) {
   std::string response;
   std::string quoted_command =
       base::GetQuotedJSONString(exec_name + " " + args);
@@ -173,18 +171,19 @@ Status AdbImpl::SetDebugApp(
 }
 
 Status AdbImpl::Launch(
-    const std::string& device_serial,
-    const std::string& app_id) {
+    const std::string& device_serial, 
+    const std::string& package,
+    const std::string& activity) {
   std::string response;
   Status status = ExecuteHostShellCommand(
       device_serial,
-      "am start -W -n " + app_id + " -d data:,",
+      "am start -W -n " + package + "/" + activity + " -d data:,",
       &response);
   if (!status.IsOk())
     return status;
   if (response.find("Complete") == std::string::npos)
     return Status(kUnknownError,
-                  "Failed to start " + app_id + " on device " + device_serial +
+                  "Failed to start " + package + " on device " + device_serial +
                   ": " + response);
   return Status(kOk);
 }
@@ -251,7 +250,7 @@ Status AdbImpl::ExecuteCommand(
 
 Status AdbImpl::ExecuteHostCommand(
     const std::string& device_serial,
-    const std::string& host_command, 
+    const std::string& host_command,
     std::string* response) {
   return ExecuteCommand(
       "host-serial:" + device_serial + ":" + host_command, response);

@@ -9,20 +9,19 @@
 #include "base/location.h"
 #include "base/memory/ref_counted.h"
 #include "base/message_loop/message_loop.h"
-#include "base/message_loop/message_loop_proxy.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/thread.h"
+#include "xwalk/test/xwalkdriver/net/net_util.h"
+#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
 #include "net/server/http_server.h"
 #include "net/server/http_server_request_info.h"
-#include "net/socket/tcp_listen_socket.h"
+#include "net/socket/tcp_server_socket.h"
 #include "net/url_request/url_request_context_getter.h"
 #include "testing/gtest/include/gtest/gtest.h"
-#include "xwalk/test/xwalkdriver/net/net_util.h"
-#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 
 namespace {
 
@@ -34,28 +33,27 @@ class FetchUrlTest : public testing::Test,
         response_(kSendHello) {
     base::Thread::Options options(base::MessageLoop::TYPE_IO, 0);
     CHECK(io_thread_.StartWithOptions(options));
-    context_getter_ = new URLRequestContextGetter(
-        io_thread_.message_loop_proxy());
+    context_getter_ = new URLRequestContextGetter(io_thread_.task_runner());
     base::WaitableEvent event(false, false);
-    io_thread_.message_loop_proxy()->PostTask(
+    io_thread_.task_runner()->PostTask(
         FROM_HERE,
-        base::Bind(&FetchUrlTest::InitOnIO,
-                   base::Unretained(this), &event));
+        base::Bind(&FetchUrlTest::InitOnIO, base::Unretained(this), &event));
     event.Wait();
   }
 
-  virtual ~FetchUrlTest() {
+  ~FetchUrlTest() override {
     base::WaitableEvent event(false, false);
-    io_thread_.message_loop_proxy()->PostTask(
-        FROM_HERE,
-        base::Bind(&FetchUrlTest::DestroyServerOnIO,
-                   base::Unretained(this), &event));
+    io_thread_.task_runner()->PostTask(
+        FROM_HERE, base::Bind(&FetchUrlTest::DestroyServerOnIO,
+                              base::Unretained(this), &event));
     event.Wait();
   }
 
   void InitOnIO(base::WaitableEvent* event) {
-    net::TCPListenSocketFactory factory("127.0.0.1", 0);
-    server_ = new net::HttpServer(factory, this);
+    scoped_ptr<net::ServerSocket> server_socket(
+        new net::TCPServerSocket(NULL, net::NetLog::Source()));
+    server_socket->ListenWithAddressAndPort("127.0.0.1", 0, 1);
+    server_.reset(new net::HttpServer(server_socket.Pass(), this));
     net::IPEndPoint address;
     CHECK_EQ(net::OK, server_->GetLocalAddress(&address));
     server_url_ = base::StringPrintf("http://127.0.0.1:%d", address.port());
@@ -63,13 +61,15 @@ class FetchUrlTest : public testing::Test,
   }
 
   void DestroyServerOnIO(base::WaitableEvent* event) {
-    server_ = NULL;
+    server_.reset(NULL);
     event->Signal();
   }
 
   // Overridden from net::HttpServer::Delegate:
-  virtual void OnHttpRequest(int connection_id,
-                             const net::HttpServerRequestInfo& info) override {
+  void OnConnect(int connection_id) override {}
+
+  void OnHttpRequest(int connection_id,
+                     const net::HttpServerRequestInfo& info) override {
     switch (response_) {
       case kSendHello:
         server_->Send200(connection_id, "hello", "text/plain");
@@ -78,22 +78,18 @@ class FetchUrlTest : public testing::Test,
         server_->Send404(connection_id);
         break;
       case kClose:
-        // net::HttpServer doesn't allow us to close connection during callback.
-        base::MessageLoop::current()->PostTask(
-            FROM_HERE,
-            base::Bind(&net::HttpServer::Close, server_, connection_id));
+        server_->Close(connection_id);
         break;
       default:
         break;
     }
   }
 
-  virtual void OnWebSocketRequest(
-      int connection_id,
-      const net::HttpServerRequestInfo& info) override {}
-  virtual void OnWebSocketMessage(int connection_id,
-                                  const std::string& data) override {}
-  virtual void OnClose(int connection_id) override {}
+  void OnWebSocketRequest(int connection_id,
+                          const net::HttpServerRequestInfo& info) override {}
+  void OnWebSocketMessage(int connection_id, const std::string& data) override {
+  }
+  void OnClose(int connection_id) override {}
 
  protected:
   enum ServerResponse {
@@ -104,7 +100,7 @@ class FetchUrlTest : public testing::Test,
 
   base::Thread io_thread_;
   ServerResponse response_;
-  scoped_refptr<net::HttpServer> server_;
+  scoped_ptr<net::HttpServer> server_;
   scoped_refptr<URLRequestContextGetter> context_getter_;
   std::string server_url_;
 };

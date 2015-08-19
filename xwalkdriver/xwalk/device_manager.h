@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_DEVICE_MANAGER_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_DEVICE_MANAGER_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_DEVICE_MANAGER_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_DEVICE_MANAGER_H_
 
 #include <list>
 #include <string>
@@ -12,30 +12,48 @@
 #include "base/compiler_specific.h"
 #include "base/memory/ref_counted.h"
 #include "base/memory/scoped_ptr.h"
-#include "base/message_loop/message_loop.h"
-#include "base/single_thread_task_runner.h"
 #include "base/synchronization/lock.h"
 
-class DeviceBridge;
+class Adb;
 class Status;
-class Device;
+class DeviceManager;
 
-namespace internal {
+class Device {
+ public:
+  ~Device();
 
-  enum DeviceType {
-    kAndroid = 0,
-    kTizen,
-    kUnknown
-  };
+  Status SetUp(const std::string& package,
+               const std::string& activity,
+               const std::string& process,
+               const std::string& args,
+               bool use_running_app,
+               int port);
 
-} // namespace internal
+  Status TearDown();
+
+ private:
+  friend class DeviceManager;
+
+  Device(const std::string& device_serial,
+         Adb* adb,
+         base::Callback<void()> release_callback);
+
+  Status ForwardDevtoolsPort(const std::string& package,
+                             const std::string& process,
+                             int port,
+                             std::string* device_socket);
+
+  const std::string serial_;
+  std::string active_package_;
+  Adb* adb_;
+  base::Callback<void()> release_callback_;
+
+  DISALLOW_COPY_AND_ASSIGN(Device);
+};
 
 class DeviceManager {
  public:
-  explicit DeviceManager(
-      const scoped_refptr<base::SingleThreadTaskRunner> io_task_runner,
-      int port,
-      int device_type);
+  explicit DeviceManager(Adb* adb);
   ~DeviceManager();
 
   // Returns a device which will not be reassigned during its lifetime.
@@ -54,8 +72,9 @@ class DeviceManager {
 
   base::Lock devices_lock_;
   std::list<std::string> active_devices_;
-  scoped_ptr<DeviceBridge> device_bridge_;
+  Adb* adb_;
 
+  DISALLOW_COPY_AND_ASSIGN(DeviceManager);
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_DEVICE_MANAGER_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_DEVICE_MANAGER_H_

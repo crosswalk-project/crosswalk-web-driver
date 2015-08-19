@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <list>
-#include <string>
+#include "xwalk/test/xwalkdriver/xwalk/console_logger.h"
 
 #include "base/compiler_specific.h"
 #include "base/format_macros.h"
 #include "base/memory/scoped_vector.h"
 #include "base/time/time.h"
 #include "base/values.h"
-#include "testing/gtest/include/gtest/gtest.h"
-#include "xwalk/test/xwalkdriver/xwalk/console_logger.h"
 #include "xwalk/test/xwalkdriver/xwalk/log.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/stub_devtools_client.h"
+#include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
 
@@ -22,7 +20,7 @@ class FakeDevToolsClient : public StubDevToolsClient {
  public:
   explicit FakeDevToolsClient(const std::string& id)
       : id_(id), listener_(NULL) {}
-  virtual ~FakeDevToolsClient() {}
+  ~FakeDevToolsClient() override {}
 
   std::string PopSentCommand() {
     std::string command;
@@ -39,11 +37,9 @@ class FakeDevToolsClient : public StubDevToolsClient {
   }
 
   // Overridden from DevToolsClient:
-  virtual Status ConnectIfNecessary() override {
-    return listener_->OnConnected(this);
-  }
+  Status ConnectIfNecessary() override { return listener_->OnConnected(this); }
 
-  virtual Status SendCommandAndGetResult(
+  Status SendCommandAndGetResult(
       const std::string& method,
       const base::DictionaryValue& params,
       scoped_ptr<base::DictionaryValue>* result) override {
@@ -51,14 +47,12 @@ class FakeDevToolsClient : public StubDevToolsClient {
     return Status(kOk);
   }
 
-  virtual void AddListener(DevToolsEventListener* listener) override {
+  void AddListener(DevToolsEventListener* listener) override {
     CHECK(!listener_);
     listener_ = listener;
   }
 
-  virtual const std::string& GetId() override {
-    return id_;
-  }
+  const std::string& GetId() override { return id_; }
 
  private:
   const std::string id_;  // WebView id.
@@ -81,16 +75,16 @@ struct LogEntry {
 
 class FakeLog : public Log {
  public:
-  virtual void AddEntryTimestamped(const base::Time& timestamp,
-                                   Level level,
-                                   const std::string& source,
-                                   const std::string& message) override;
+  void AddEntryTimestamped(const base::Time& timestamp,
+                           Level level,
+                           const std::string& source,
+                           const std::string& message) override;
 
   const ScopedVector<LogEntry>& GetEntries() {
     return entries_;
   }
 
- private:
+private:
   ScopedVector<LogEntry> entries_;
 };
 

@@ -12,13 +12,13 @@
 #include "base/memory/scoped_ptr.h"
 #include "base/strings/stringprintf.h"
 #include "base/values.h"
-#include "testing/gtest/include/gtest/gtest.h"
-#include "url/gurl.h"
-#include "xwalk/test/xwalkdriver/net/sync_websocket.h"
-#include "xwalk/test/xwalkdriver/net/sync_websocket_factory.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_client_impl.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_event_listener.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/net/sync_websocket.h"
+#include "xwalk/test/xwalkdriver/net/sync_websocket_factory.h"
+#include "testing/gtest/include/gtest/gtest.h"
+#include "url/gurl.h"
 
 namespace {
 
@@ -41,7 +41,8 @@ class MockSyncWebSocket : public SyncWebSocket {
 
   bool Send(const std::string& message) override {
     EXPECT_TRUE(connected_);
-    scoped_ptr<base::Value> value(base::JSONReader::Read(message));
+    scoped_ptr<base::Value> value;
+    value.reset(base::JSONReader::Read(message));
     base::DictionaryValue* dict = NULL;
     EXPECT_TRUE(value->GetAsDictionary(&dict));
     if (!dict)
@@ -537,8 +538,12 @@ TEST(ParseInspectorMessage, CommandNoErrorOrResult) {
   internal::InspectorMessageType type;
   internal::InspectorEvent event;
   internal::InspectorCommandResponse response;
-  ASSERT_FALSE(internal::ParseInspectorMessage(
+  // As per Chromium issue 392577, DevTools does not necessarily return a
+  // "result" dictionary for every valid response. If neither "error" nor
+  // "result" keys are present, a blank result dictionary should be inferred.
+  ASSERT_TRUE(internal::ParseInspectorMessage(
       "{\"id\":1}", 0, &type, &event, &response));
+  ASSERT_TRUE(response.result->empty());
 }
 
 TEST(ParseInspectorMessage, CommandError) {
@@ -707,7 +712,8 @@ class OnConnectedSyncWebSocket : public SyncWebSocket {
 
   bool Send(const std::string& message) override {
     EXPECT_TRUE(connected_);
-    scoped_ptr<base::Value> value(base::JSONReader::Read(message));
+    scoped_ptr<base::Value> value;
+    value.reset(base::JSONReader::Read(message));
     base::DictionaryValue* dict = NULL;
     EXPECT_TRUE(value->GetAsDictionary(&dict));
     if (!dict)

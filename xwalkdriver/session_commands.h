@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_SESSION_COMMANDS_H_
-#define XWALK_TEST_XWALKDRIVER_SESSION_COMMANDS_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_SESSION_COMMANDS_H_
+#define CHROME_TEST_CHROMEDRIVER_SESSION_COMMANDS_H_
 
 #include <string>
 
@@ -24,18 +24,17 @@ struct Session;
 class Status;
 class URLRequestContextGetter;
 
-
 struct InitSessionParams {
   InitSessionParams(scoped_refptr<URLRequestContextGetter> context_getter,
                     const SyncWebSocketFactory& socket_factory,
-                    scoped_ptr<DeviceManager>* device_manager,
+                    DeviceManager* device_manager,
                     PortServer* port_server,
                     PortManager* port_manager);
   ~InitSessionParams();
 
   scoped_refptr<URLRequestContextGetter> context_getter;
   SyncWebSocketFactory socket_factory;
-  scoped_ptr<DeviceManager>* device_manager;
+  DeviceManager* device_manager;
   PortServer* port_server;
   PortManager* port_manager;
 };
@@ -109,7 +108,17 @@ Status ExecuteIsLoading(
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value);
 
+Status ExecuteLaunchApp(
+    Session* session,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value);
+
 Status ExecuteGetLocation(
+    Session* session,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value);
+
+Status ExecuteGetNetworkConditions(
     Session* session,
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value);
@@ -154,9 +163,14 @@ Status ExecuteUploadFile(
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value);
 
-Status ExecuteGetBrowserOrientation(
+Status ExecuteIsAutoReporting(
     Session* session,
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value);
 
-#endif  // XWALK_TEST_XWALKDRIVER_SESSION_COMMANDS_H_
+Status ExecuteSetAutoReporting(
+    Session* session,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value);
+
+#endif  // CHROME_TEST_CHROMEDRIVER_SESSION_COMMANDS_H_

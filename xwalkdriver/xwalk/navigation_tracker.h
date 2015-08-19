@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_NAVIGATION_TRACKER_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_NAVIGATION_TRACKER_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_NAVIGATION_TRACKER_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_NAVIGATION_TRACKER_H_
 
 #include <set>
 #include <string>
 
 #include "base/basictypes.h"
 #include "base/compiler_specific.h"
+#include "base/memory/scoped_ptr.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_event_listener.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 
@@ -17,6 +18,7 @@ namespace base {
 class DictionaryValue;
 }
 
+struct BrowserInfo;
 class DevToolsClient;
 class Status;
 
@@ -29,28 +31,36 @@ class NavigationTracker : public DevToolsEventListener {
     kNotLoading,
   };
 
-  explicit NavigationTracker(DevToolsClient* client);
-  NavigationTracker(DevToolsClient* client, LoadingState known_state);
-  virtual ~NavigationTracker();
+  NavigationTracker(DevToolsClient* client, const BrowserInfo* browser_info);
+
+  NavigationTracker(DevToolsClient* client,
+                    LoadingState known_state,
+                    const BrowserInfo* browser_info);
+
+  ~NavigationTracker() override;
 
   // Gets whether a navigation is pending for the specified frame. |frame_id|
   // may be empty to signify the main frame.
   Status IsPendingNavigation(const std::string& frame_id, bool* is_pending);
 
   // Overridden from DevToolsEventListener:
-  virtual Status OnConnected(DevToolsClient* client) override;
-  virtual Status OnEvent(DevToolsClient* client,
-                         const std::string& method,
-                         const base::DictionaryValue& params) override;
-  virtual Status OnCommandSuccess(DevToolsClient* client,
-                                  const std::string& method) override;
+  Status OnConnected(DevToolsClient* client) override;
+  Status OnEvent(DevToolsClient* client,
+                 const std::string& method,
+                 const base::DictionaryValue& params) override;
+  Status OnCommandSuccess(DevToolsClient* client,
+                          const std::string& method) override;
 
  private:
   DevToolsClient* client_;
   LoadingState loading_state_;
+  const BrowserInfo* browser_info_;
+  std::set<std::string> pending_frame_set_;
   std::set<std::string> scheduled_frame_set_;
+
+  void ResetLoadingState(LoadingState loading_state);
 
   DISALLOW_COPY_AND_ASSIGN(NavigationTracker);
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_NAVIGATION_TRACKER_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_NAVIGATION_TRACKER_H_

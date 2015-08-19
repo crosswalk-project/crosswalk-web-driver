@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_ELEMENT_COMMANDS_H_
-#define XWALK_TEST_XWALKDRIVER_ELEMENT_COMMANDS_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_ELEMENT_COMMANDS_H_
+#define CHROME_TEST_CHROMEDRIVER_ELEMENT_COMMANDS_H_
 
 #include <string>
 
@@ -70,6 +70,30 @@ Status ExecuteClickElement(
 
 // Touch click on the element.
 Status ExecuteTouchSingleTap(
+    Session* session,
+    WebView* web_view,
+    const std::string& element_id,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value);
+
+// Double tap on the element.
+Status ExecuteTouchDoubleTap(
+    Session* session,
+    WebView* web_view,
+    const std::string& element_id,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value);
+
+// Long press on the element.
+Status ExecuteTouchLongPress(
+    Session* session,
+    WebView* web_view,
+    const std::string& element_id,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value);
+
+// Touch flick starting on the element.
+Status ExecuteFlick(
     Session* session,
     WebView* web_view,
     const std::string& element_id,
@@ -192,4 +216,4 @@ Status ExecuteElementEquals(
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value);
 
-#endif  // XWALK_TEST_XWALKDRIVER_ELEMENT_COMMANDS_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_ELEMENT_COMMANDS_H_

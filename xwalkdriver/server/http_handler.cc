@@ -11,24 +11,24 @@
 #include "base/logging.h"  // For CHECK macros.
 #include "base/memory/scoped_ptr.h"
 #include "base/message_loop/message_loop.h"
-#include "base/message_loop/message_loop_proxy.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/sys_info.h"
+#include "base/thread_task_runner_handle.h"
 #include "base/values.h"
-#include "net/server/http_server_request_info.h"
-#include "net/server/http_server_response_info.h"
 #include "xwalk/test/xwalkdriver/alert_commands.h"
-#include "xwalk/test/xwalkdriver/capabilities.h"
+#include "xwalk/test/xwalkdriver/xwalk/adb_impl.h"
+#include "xwalk/test/xwalkdriver/xwalk/device_manager.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/net/port_server.h"
 #include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 #include "xwalk/test/xwalkdriver/session.h"
 #include "xwalk/test/xwalkdriver/session_thread_map.h"
 #include "xwalk/test/xwalkdriver/util.h"
 #include "xwalk/test/xwalkdriver/version.h"
-#include "xwalk/test/xwalkdriver/xwalk/device_manager.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "net/server/http_server_request_info.h"
+#include "net/server/http_server_response_info.h"
 
 #if defined(OS_MACOSX)
 #include "base/mac/scoped_nsautorelease_pool.h"
@@ -66,6 +66,7 @@ HttpHandler::HttpHandler(
     const base::Closure& quit_func,
     const scoped_refptr<base::SingleThreadTaskRunner> io_task_runner,
     const std::string& url_base,
+    int adb_port,
     scoped_ptr<PortServer> port_server)
     : quit_func_(quit_func),
       url_base_(url_base),
@@ -74,16 +75,13 @@ HttpHandler::HttpHandler(
 #if defined(OS_MACOSX)
   base::mac::ScopedNSAutoreleasePool autorelease_pool;
 #endif
-
   context_getter_ = new URLRequestContextGetter(io_task_runner);
   socket_factory_ = CreateSyncWebSocketFactory(context_getter_.get());
+  adb_.reset(new AdbImpl(io_task_runner, adb_port));
+  device_manager_.reset(new DeviceManager(adb_.get()));
   port_server_ = port_server.Pass();
   port_manager_.reset(new PortManager(12000, 13000));
 
-  // Defer the initialization of device_manager_ when hits "ExecuteInitSession"
-  // on http requests. It's invoked by reset to specific DeviceManager after
-  // parsing desired capabilities other than redundancy command line switches.
-  // The lifecycle of device_manager_ sync with HttpHandler.
   CommandMapping commands[] = {
       CommandMapping(
           kPost,
@@ -95,9 +93,15 @@ HttpHandler::HttpHandler(
                          base::Bind(&ExecuteInitSession,
                                     InitSessionParams(context_getter_,
                                                       socket_factory_,
-                                                      &device_manager_,
+                                                      device_manager_.get(),
                                                       port_server_.get(),
                                                       port_manager_.get()))))),
+      CommandMapping(kGet,
+                     "sessions",
+                     base::Bind(&ExecuteGetSessions,
+                               WrapToCommand("GetSessions",
+                               base::Bind(&ExecuteGetSessionCapabilities)),
+                               &session_thread_map_)),
       CommandMapping(kGet,
                      "session/:sessionId",
                      WrapToCommand("GetSessionCapabilities",
@@ -120,6 +124,9 @@ HttpHandler::HttpHandler(
       CommandMapping(kPost,
                      "session/:sessionId/url",
                      WrapToCommand("Navigate", base::Bind(&ExecuteGet))),
+      CommandMapping(kPost,
+                     "session/:sessionId/chromium/launch_app",
+                     WrapToCommand("LaunchApp", base::Bind(&ExecuteLaunchApp))),
       CommandMapping(kGet,
                      "session/:sessionId/alert",
                      WrapToCommand("IsAlertOpen",
@@ -294,8 +301,8 @@ HttpHandler::HttpHandler(
                                    base::Bind(&ExecuteDeleteAllCookies))),
       CommandMapping(
           kGet,
-          "session/:sessionId/cookie/:name",
-          WrapToCommand("GetCookie", base::Bind(&ExecuteGetCookie))),
+	  "session/:sessionId/cookie/:name",
+	   WrapToCommand("GetCookie", base::Bind(&ExecuteGetCookie))),
       CommandMapping(
           kDelete,
           "session/:sessionId/cookie/:name",
@@ -304,6 +311,11 @@ HttpHandler::HttpHandler(
           kPost,
           "session/:sessionId/frame",
           WrapToCommand("SwitchToFrame", base::Bind(&ExecuteSwitchToFrame))),
+      CommandMapping(
+          kPost,
+          "session/:sessionId/frame/parent",
+          WrapToCommand("SwitchToParentFrame",
+                        base::Bind(&ExecuteSwitchToParentFrame))),
       CommandMapping(
           kPost,
           "session/:sessionId/window",
@@ -364,12 +376,25 @@ HttpHandler::HttpHandler(
           WrapToCommand("SetGeolocation", base::Bind(&ExecuteSetLocation))),
       CommandMapping(
           kGet,
-          "session/:sessionId/application_cache/status",
-          WrapToCommand("GetAppCacheStatus", base::Bind(&ExecuteGetAppCacheStatus))),
+          "session/:sessionId/chromium/network_conditions",
+          WrapToCommand("GetNetworkConditions",
+                        base::Bind(&ExecuteGetNetworkConditions))),
       CommandMapping(
-          kGet,
-          "session/:sessionId/browser_connection",
-          WrapToCommand("IsBrowserOnline", base::Bind(&ExecuteIsBrowserOnline))),
+          kPost,
+          "session/:sessionId/chromium/network_conditions",
+          WrapToCommand("SetNetworkConditions",
+                        base::Bind(&ExecuteSetNetworkConditions))),
+      CommandMapping(
+          kDelete,
+          "session/:sessionId/chromium/network_conditions",
+          WrapToCommand("DeleteNetworkConditions",
+                        base::Bind(&ExecuteDeleteNetworkConditions))),
+      CommandMapping(kGet,
+                     "session/:sessionId/application_cache/status",
+                     base::Bind(&ExecuteGetStatus)),
+      CommandMapping(kGet,
+                     "session/:sessionId/browser_connection",
+                     base::Bind(&UnimplementedCommand)),
       CommandMapping(kPost,
                      "session/:sessionId/browser_connection",
                      base::Bind(&UnimplementedCommand)),
@@ -433,11 +458,9 @@ HttpHandler::HttpHandler(
           "session/:sessionId/session_storage/size",
           WrapToCommand("GetSessionStorageSize",
                         base::Bind(&ExecuteGetStorageSize, kSessionStorage))),
-      CommandMapping(
-          kGet,
-          "session/:sessionId/orientation",
-          WrapToCommand("GetBrowserOrientation",
-						base::Bind(&ExecuteGetBrowserOrientation))),
+      CommandMapping(kGet,
+                     "session/:sessionId/orientation",
+                     base::Bind(&UnimplementedCommand)),
       CommandMapping(kPost,
                      "session/:sessionId/orientation",
                      base::Bind(&UnimplementedCommand)),
@@ -493,16 +516,19 @@ HttpHandler::HttpHandler(
                      WrapToCommand("TouchMove", base::Bind(&ExecuteTouchMove))),
       CommandMapping(kPost,
                      "session/:sessionId/touch/scroll",
-                     base::Bind(&UnimplementedCommand)),
+                     WrapToCommand("TouchScroll",
+                                   base::Bind(&ExecuteTouchScroll))),
       CommandMapping(kPost,
                      "session/:sessionId/touch/doubleclick",
-                     base::Bind(&UnimplementedCommand)),
+                     WrapToCommand("TouchDoubleTap",
+                                   base::Bind(&ExecuteTouchDoubleTap))),
       CommandMapping(kPost,
                      "session/:sessionId/touch/longclick",
-                     base::Bind(&UnimplementedCommand)),
+                     WrapToCommand("TouchLongPress",
+                                   base::Bind(&ExecuteTouchLongPress))),
       CommandMapping(kPost,
                      "session/:sessionId/touch/flick",
-                     base::Bind(&UnimplementedCommand)),
+                     WrapToCommand("TouchFlick", base::Bind(&ExecuteFlick))),
       CommandMapping(kPost,
                      "session/:sessionId/log",
                      WrapToCommand("GetLog", base::Bind(&ExecuteGetLog))),
@@ -530,6 +556,19 @@ HttpHandler::HttpHandler(
       CommandMapping(kGet,
                      "session/:sessionId/is_loading",
                      WrapToCommand("IsLoading", base::Bind(&ExecuteIsLoading))),
+      CommandMapping(kGet,
+                     "session/:sessionId/autoreport",
+                     WrapToCommand("IsAutoReporting",
+                                   base::Bind(&ExecuteIsAutoReporting))),
+      CommandMapping(kPost,
+                     "session/:sessionId/autoreport",
+                     WrapToCommand(
+                         "SetAutoReporting",
+                         base::Bind(&ExecuteSetAutoReporting))),
+      CommandMapping(kPost,
+                     "session/:sessionId/touch/pinch",
+                     WrapToCommand("TouchPinch",
+                                   base::Bind(&ExecuteTouchPinch))),
   };
   command_map_.reset(
       new CommandMap(commands, commands + arraysize(commands)));
@@ -608,7 +647,7 @@ void HttpHandler::HandleCommand(
 
   if (request.data.length()) {
     base::DictionaryValue* body_params;
-    scoped_ptr<base::Value> parsed_body(base::JSONReader::Read(request.data));
+    scoped_ptr<base::Value> parsed_body = make_scoped_ptr(base::JSONReader::Read(request.data));
     if (!parsed_body || !parsed_body->GetAsDictionary(&body_params)) {
       scoped_ptr<net::HttpServerResponseInfo> response(
           new net::HttpServerResponseInfo(net::HTTP_BAD_REQUEST));
@@ -653,15 +692,7 @@ scoped_ptr<net::HttpServerResponseInfo> HttpHandler::PrepareResponseHelper(
     return response.Pass();
   }
 
-  if (trimmed_path == internal::kNewSessionPathPattern && status.IsOk()) {
-    // Creating a session involves a HTTP request to /session, which is
-    // supposed to redirect to /session/:sessionId, which returns the
-    // session info.
-    scoped_ptr<net::HttpServerResponseInfo> response(
-        new net::HttpServerResponseInfo(net::HTTP_SEE_OTHER));
-    response->AddHeader("Location", url_base_ + "session/" + session_id);
-    return response.Pass();
-  } else if (status.IsError()) {
+  if (status.IsError()) {
     Status full_status(status);
     full_status.AddDetails(base::StringPrintf(
         "Driver info: xwalkdriver=%s,platform=%s %s %s",
@@ -674,7 +705,7 @@ scoped_ptr<net::HttpServerResponseInfo> HttpHandler::PrepareResponseHelper(
     value.reset(error.release());
   }
   if (!value)
-    value.reset(base::Value::CreateNullValue());
+    value = base::Value::CreateNullValue();
 
   base::DictionaryValue body_params;
   body_params.SetInteger("status", status.code());

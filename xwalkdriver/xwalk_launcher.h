@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_LAUNCHER_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_LAUNCHER_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_LAUNCHER_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_LAUNCHER_H_
 
 #include <string>
 #include <vector>
@@ -19,7 +19,6 @@ class DevToolsEventListener;
 namespace base {
 class DictionaryValue;
 class FilePath;
-class CommandLine;
 }
 
 class Xwalk;
@@ -32,11 +31,11 @@ class URLRequestContextGetter;
 Status LaunchXwalk(
     URLRequestContextGetter* context_getter,
     const SyncWebSocketFactory& socket_factory,
-    scoped_ptr<DeviceManager>* device_manager,
+    DeviceManager* device_manager,
     PortServer* port_server,
     PortManager* port_manager,
     const Capabilities& capabilities,
-    ScopedVector<DevToolsEventListener>& devtools_event_listeners,
+    ScopedVector<DevToolsEventListener>* devtools_event_listeners,
     scoped_ptr<Xwalk>* xwalk);
 
 namespace internal {
@@ -51,4 +50,4 @@ Status PrepareUserDataDir(
     const base::DictionaryValue* custom_local_state);
 }  // namespace internal
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_LAUNCHER_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_LAUNCHER_H_

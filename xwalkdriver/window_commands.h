@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_WINDOW_COMMANDS_H_
-#define XWALK_TEST_XWALKDRIVER_WINDOW_COMMANDS_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_WINDOW_COMMANDS_H_
+#define CHROME_TEST_CHROMEDRIVER_WINDOW_COMMANDS_H_
 
 #include <string>
 
@@ -55,6 +55,13 @@ Status ExecuteExecuteAsyncScript(
 
 // Changes the targeted frame for the given session.
 Status ExecuteSwitchToFrame(
+    Session* session,
+    WebView* web_view,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value);
+
+// Change focus to the parent frame.
+Status ExecuteSwitchToParentFrame(
     Session* session,
     WebView* web_view,
     const base::DictionaryValue& params,
@@ -174,6 +181,19 @@ Status ExecuteTouchMove(
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value);
 
+// Do a swipe (scroll) gesture beginning at the element.
+Status ExecuteTouchScroll(
+    Session *session,
+    WebView* web_view,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value);
+
+Status ExecuteTouchPinch(
+    Session* session,
+    WebView* web_view,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value);
+
 Status ExecuteGetActiveElement(
     Session* session,
     WebView* web_view,
@@ -248,15 +268,15 @@ Status ExecuteScreenshot(
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value);
 
-// Retrieve specific cookie visible to the current page by name.
-Status ExecuteGetCookie(
+// Retrieve all cookies visible to the current page.
+Status ExecuteGetCookies(
     Session* session,
     WebView* web_view,
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value);
 
-// Retrieve all cookies visible to the current page.
-Status ExecuteGetCookies(
+
+Status ExecuteGetCookie(
     Session* session,
     WebView* web_view,
     const base::DictionaryValue& params,
@@ -290,10 +310,22 @@ Status ExecuteSetLocation(
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value);
 
+Status ExecuteSetNetworkConditions(
+    Session* session,
+    WebView* web_view,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value);
+
+Status ExecuteDeleteNetworkConditions(
+    Session* session,
+    WebView* web_view,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value);
+
 Status ExecuteTakeHeapSnapshot(
     Session* session,
     WebView* web_view,
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value);
 
-#endif  // XWALK_TEST_XWALKDRIVER_WINDOW_COMMANDS_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_WINDOW_COMMANDS_H_

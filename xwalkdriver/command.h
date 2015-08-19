@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_COMMAND_H_
-#define XWALK_TEST_XWALKDRIVER_COMMAND_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_COMMAND_H_
+#define CHROME_TEST_CHROMEDRIVER_COMMAND_H_
 
 #include <string>
 
@@ -27,4 +27,4 @@ typedef base::Callback<void(
     const std::string&,
     const CommandCallback&)> Command;
 
-#endif  // XWALK_TEST_XWALKDRIVER_COMMAND_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_COMMAND_H_

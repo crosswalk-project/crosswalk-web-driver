@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/values.h"
-#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/capabilities.h"
+
+#include "base/values.h"
 #include "xwalk/test/xwalkdriver/xwalk/log.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/logging.h"
+#include "testing/gtest/include/gtest/gtest.h"
 
 TEST(Switches, Empty) {
   Switches switches;
-  CommandLine cmd(CommandLine::NO_PROGRAM);
+  base::CommandLine cmd(base::CommandLine::NO_PROGRAM);
   switches.AppendToCommandLine(&cmd);
   ASSERT_EQ(0u, cmd.GetSwitches().size());
   ASSERT_EQ("", switches.ToString());
@@ -23,7 +25,7 @@ TEST(Switches, NoValue) {
   ASSERT_TRUE(switches.HasSwitch("hello"));
   ASSERT_EQ("", switches.GetSwitchValue("hello"));
 
-  CommandLine cmd(CommandLine::NO_PROGRAM);
+  base::CommandLine cmd(base::CommandLine::NO_PROGRAM);
   switches.AppendToCommandLine(&cmd);
   ASSERT_TRUE(cmd.HasSwitch("hello"));
   ASSERT_EQ(FILE_PATH_LITERAL(""), cmd.GetSwitchValueNative("hello"));
@@ -37,7 +39,7 @@ TEST(Switches, Value) {
   ASSERT_TRUE(switches.HasSwitch("hello"));
   ASSERT_EQ("there", switches.GetSwitchValue("hello"));
 
-  CommandLine cmd(CommandLine::NO_PROGRAM);
+  base::CommandLine cmd(base::CommandLine::NO_PROGRAM);
   switches.AppendToCommandLine(&cmd);
   ASSERT_TRUE(cmd.HasSwitch("hello"));
   ASSERT_EQ(FILE_PATH_LITERAL("there"), cmd.GetSwitchValueNative("hello"));
@@ -77,7 +79,7 @@ TEST(Switches, Multiple) {
   switches.SetSwitch("switch");
   switches.SetSwitch("hello", "there");
 
-  CommandLine cmd(CommandLine::NO_PROGRAM);
+  base::CommandLine cmd(base::CommandLine::NO_PROGRAM);
   switches.AppendToCommandLine(&cmd);
   ASSERT_TRUE(cmd.HasSwitch("switch"));
   ASSERT_TRUE(cmd.HasSwitch("hello"));
@@ -335,6 +337,111 @@ TEST(ParseCapabilities, LoggingPrefsNotDict) {
   ASSERT_FALSE(status.IsOk());
 }
 
+TEST(ParseCapabilities, PerfLoggingPrefsInspectorDomainStatus) {
+  Capabilities capabilities;
+  // Perf log must be enabled if performance log preferences are specified.
+  base::DictionaryValue logging_prefs;
+  logging_prefs.SetString(WebDriverLog::kPerformanceType, "INFO");
+  base::DictionaryValue desired_caps;
+  desired_caps.Set("loggingPrefs", logging_prefs.DeepCopy());
+  ASSERT_EQ(PerfLoggingPrefs::InspectorDomainStatus::kDefaultEnabled,
+            capabilities.perf_logging_prefs.network);
+  ASSERT_EQ(PerfLoggingPrefs::InspectorDomainStatus::kDefaultEnabled,
+            capabilities.perf_logging_prefs.page);
+  ASSERT_EQ(PerfLoggingPrefs::InspectorDomainStatus::kDefaultDisabled,
+            capabilities.perf_logging_prefs.timeline);
+  base::DictionaryValue perf_logging_prefs;
+  perf_logging_prefs.SetBoolean("enableNetwork", true);
+  perf_logging_prefs.SetBoolean("enablePage", false);
+  desired_caps.Set("xwalkOptions.perfLoggingPrefs",
+                   perf_logging_prefs.DeepCopy());
+  Status status = capabilities.Parse(desired_caps);
+  ASSERT_TRUE(status.IsOk());
+  ASSERT_EQ(PerfLoggingPrefs::InspectorDomainStatus::kExplicitlyEnabled,
+            capabilities.perf_logging_prefs.network);
+  ASSERT_EQ(PerfLoggingPrefs::InspectorDomainStatus::kExplicitlyDisabled,
+            capabilities.perf_logging_prefs.page);
+  ASSERT_EQ(PerfLoggingPrefs::InspectorDomainStatus::kDefaultDisabled,
+            capabilities.perf_logging_prefs.timeline);
+}
+
+TEST(ParseCapabilities, PerfLoggingPrefsTracing) {
+  Capabilities capabilities;
+  // Perf log must be enabled if performance log preferences are specified.
+  base::DictionaryValue logging_prefs;
+  logging_prefs.SetString(WebDriverLog::kPerformanceType, "INFO");
+  base::DictionaryValue desired_caps;
+  desired_caps.Set("loggingPrefs", logging_prefs.DeepCopy());
+  ASSERT_EQ("", capabilities.perf_logging_prefs.trace_categories);
+  base::DictionaryValue perf_logging_prefs;
+  perf_logging_prefs.SetString("traceCategories", "benchmark,blink.console");
+  perf_logging_prefs.SetInteger("bufferUsageReportingInterval", 1234);
+  desired_caps.Set("xwalkOptions.perfLoggingPrefs",
+                   perf_logging_prefs.DeepCopy());
+  Status status = capabilities.Parse(desired_caps);
+  ASSERT_TRUE(status.IsOk());
+  ASSERT_EQ("benchmark,blink.console",
+            capabilities.perf_logging_prefs.trace_categories);
+  ASSERT_EQ(1234,
+            capabilities.perf_logging_prefs.buffer_usage_reporting_interval);
+}
+
+TEST(ParseCapabilities, PerfLoggingPrefsInvalidInterval) {
+  Capabilities capabilities;
+  // Perf log must be enabled if performance log preferences are specified.
+  base::DictionaryValue logging_prefs;
+  logging_prefs.SetString(WebDriverLog::kPerformanceType, "INFO");
+  base::DictionaryValue desired_caps;
+  desired_caps.Set("loggingPrefs", logging_prefs.DeepCopy());
+  base::DictionaryValue perf_logging_prefs;
+  // A bufferUsageReportingInterval interval <= 0 will cause DevTools errors.
+  perf_logging_prefs.SetInteger("bufferUsageReportingInterval", 0);
+  desired_caps.Set("xwalkOptions.perfLoggingPrefs",
+                   perf_logging_prefs.DeepCopy());
+  Status status = capabilities.Parse(desired_caps);
+  ASSERT_FALSE(status.IsOk());
+}
+
+TEST(ParseCapabilities, PerfLoggingPrefsNotDict) {
+  Capabilities capabilities;
+  // Perf log must be enabled if performance log preferences are specified.
+  base::DictionaryValue logging_prefs;
+  logging_prefs.SetString(WebDriverLog::kPerformanceType, "INFO");
+  base::DictionaryValue desired_caps;
+  desired_caps.Set("loggingPrefs", logging_prefs.DeepCopy());
+  desired_caps.SetString("xwalkOptions.perfLoggingPrefs", "traceCategories");
+  Status status = capabilities.Parse(desired_caps);
+  ASSERT_FALSE(status.IsOk());
+}
+
+TEST(ParseCapabilities, PerfLoggingPrefsNoPerfLogLevel) {
+  Capabilities capabilities;
+  base::DictionaryValue desired_caps;
+  base::DictionaryValue perf_logging_prefs;
+  perf_logging_prefs.SetBoolean("enableNetwork", true);
+  desired_caps.Set("xwalkOptions.perfLoggingPrefs",
+                   perf_logging_prefs.DeepCopy());
+  // Should fail because perf log must be enabled if perf log prefs specified.
+  Status status = capabilities.Parse(desired_caps);
+  ASSERT_FALSE(status.IsOk());
+}
+
+TEST(ParseCapabilities, PerfLoggingPrefsPerfLogOff) {
+  Capabilities capabilities;
+  base::DictionaryValue logging_prefs;
+  // Disable performance log by setting logging level to OFF.
+  logging_prefs.SetString(WebDriverLog::kPerformanceType, "OFF");
+  base::DictionaryValue desired_caps;
+  desired_caps.Set("loggingPrefs", logging_prefs.DeepCopy());
+  base::DictionaryValue perf_logging_prefs;
+  perf_logging_prefs.SetBoolean("enableNetwork", true);
+  desired_caps.Set("xwalkOptions.perfLoggingPrefs",
+                   perf_logging_prefs.DeepCopy());
+  // Should fail because perf log must be enabled if perf log prefs specified.
+  Status status = capabilities.Parse(desired_caps);
+  ASSERT_FALSE(status.IsOk());
+}
+
 TEST(ParseCapabilities, ExcludeSwitches) {
   Capabilities capabilities;
   base::ListValue exclude_switches;
@@ -350,13 +457,108 @@ TEST(ParseCapabilities, ExcludeSwitches) {
   ASSERT_TRUE(switches.find("switch2") != switches.end());
 }
 
-TEST(ParseCapabilities, UseExistingBrowser) {
+TEST(ParseCapabilities, UseRemoteBrowser) {
   Capabilities capabilities;
   base::DictionaryValue caps;
   caps.SetString("xwalkOptions.debuggerAddress", "abc:123");
   Status status = capabilities.Parse(caps);
   ASSERT_TRUE(status.IsOk());
-  ASSERT_TRUE(capabilities.IsExistingBrowser());
+  ASSERT_TRUE(capabilities.IsRemoteBrowser());
   ASSERT_EQ("abc", capabilities.debugger_address.host());
   ASSERT_EQ(123, capabilities.debugger_address.port());
+}
+
+TEST(ParseCapabilities, MobileEmulationUserAgent) {
+  Capabilities capabilities;
+  base::DictionaryValue mobile_emulation;
+  mobile_emulation.SetString("userAgent", "Agent Smith");
+  base::DictionaryValue caps;
+  caps.Set("xwalkOptions.mobileEmulation", mobile_emulation.DeepCopy());
+  Status status = capabilities.Parse(caps);
+  ASSERT_TRUE(status.IsOk());
+
+  ASSERT_EQ(1u, capabilities.switches.GetSize());
+  ASSERT_TRUE(capabilities.switches.HasSwitch("user-agent"));
+  ASSERT_EQ("Agent Smith", capabilities.switches.GetSwitchValue("user-agent"));
+}
+
+TEST(ParseCapabilities, MobileEmulationDeviceMetrics) {
+  Capabilities capabilities;
+  base::DictionaryValue mobile_emulation;
+  mobile_emulation.SetInteger("deviceMetrics.width", 360);
+  mobile_emulation.SetInteger("deviceMetrics.height", 640);
+  mobile_emulation.SetDouble("deviceMetrics.pixelRatio", 3.0);
+  base::DictionaryValue caps;
+  caps.Set("xwalkOptions.mobileEmulation", mobile_emulation.DeepCopy());
+  Status status = capabilities.Parse(caps);
+  ASSERT_TRUE(status.IsOk());
+
+  ASSERT_EQ(360, capabilities.device_metrics->width);
+  ASSERT_EQ(640, capabilities.device_metrics->height);
+  ASSERT_EQ(3.0, capabilities.device_metrics->device_scale_factor);
+}
+
+TEST(ParseCapabilities, MobileEmulationDeviceName) {
+  Capabilities capabilities;
+  base::DictionaryValue mobile_emulation;
+  mobile_emulation.SetString("deviceName", "Google Nexus 5");
+  base::DictionaryValue caps;
+  caps.Set("xwalkOptions.mobileEmulation", mobile_emulation.DeepCopy());
+  Status status = capabilities.Parse(caps);
+  ASSERT_TRUE(status.IsOk());
+
+  ASSERT_EQ(1u, capabilities.switches.GetSize());
+  ASSERT_TRUE(capabilities.switches.HasSwitch("user-agent"));
+  ASSERT_EQ(
+      "Mozilla/5.0 (Linux; Android 4.4.4; en-us; Nexus 5 Build/JOP40D) "
+      "AppleWebKit/537.36 (KHTML, like Gecko) Xwalk/42.0.2307.2 "
+      "Mobile Safari/537.36",
+      capabilities.switches.GetSwitchValue("user-agent"));
+
+  ASSERT_EQ(360, capabilities.device_metrics->width);
+  ASSERT_EQ(640, capabilities.device_metrics->height);
+  ASSERT_EQ(3.0, capabilities.device_metrics->device_scale_factor);
+}
+
+TEST(ParseCapabilities, MobileEmulationNotDict) {
+  Capabilities capabilities;
+  base::DictionaryValue caps;
+  caps.SetString("xwalkOptions.mobileEmulation", "Google Nexus 5");
+  Status status = capabilities.Parse(caps);
+  ASSERT_FALSE(status.IsOk());
+}
+
+TEST(ParseCapabilities, MobileEmulationDeviceMetricsNotDict) {
+  Capabilities capabilities;
+  base::DictionaryValue mobile_emulation;
+  mobile_emulation.SetInteger("deviceMetrics", 360);
+  base::DictionaryValue caps;
+  caps.Set("xwalkOptions.mobileEmulation", mobile_emulation.DeepCopy());
+  Status status = capabilities.Parse(caps);
+  ASSERT_FALSE(status.IsOk());
+}
+
+TEST(ParseCapabilities, MobileEmulationDeviceMetricsNotNumbers) {
+  Capabilities capabilities;
+  base::DictionaryValue mobile_emulation;
+  mobile_emulation.SetString("deviceMetrics.width", "360");
+  mobile_emulation.SetString("deviceMetrics.height", "640");
+  mobile_emulation.SetString("deviceMetrics.pixelRatio", "3.0");
+  base::DictionaryValue caps;
+  caps.Set("xwalkOptions.mobileEmulation", mobile_emulation.DeepCopy());
+  Status status = capabilities.Parse(caps);
+  ASSERT_FALSE(status.IsOk());
+}
+
+TEST(ParseCapabilities, MobileEmulationBadDict) {
+  Capabilities capabilities;
+  base::DictionaryValue mobile_emulation;
+  mobile_emulation.SetString("deviceName", "Google Nexus 5");
+  mobile_emulation.SetInteger("deviceMetrics.width", 360);
+  mobile_emulation.SetInteger("deviceMetrics.height", 640);
+  mobile_emulation.SetDouble("deviceMetrics.pixelRatio", 3.0);
+  base::DictionaryValue caps;
+  caps.Set("xwalkOptions.mobileEmulation", mobile_emulation.DeepCopy());
+  Status status = capabilities.Parse(caps);
+  ASSERT_FALSE(status.IsOk());
 }

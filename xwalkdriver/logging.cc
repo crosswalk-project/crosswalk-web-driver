@@ -13,14 +13,15 @@
 #include "base/strings/stringprintf.h"
 #include "base/time/time.h"
 #include "xwalk/test/xwalkdriver/capabilities.h"
-#include "xwalk/test/xwalkdriver/session.h"
 #include "xwalk/test/xwalkdriver/xwalk/console_logger.h"
-#include "xwalk/test/xwalkdriver/xwalk/performance_logger.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/command_listener_proxy.h"
+#include "xwalk/test/xwalkdriver/performance_logger.h"
+#include "xwalk/test/xwalkdriver/session.h"
 
 #if defined(OS_POSIX)
-#include <fcntl.h>  // NOLINT
-#include <unistd.h>  // NOLINT
+#include <fcntl.h>
+#include <unistd.h>
 #endif
 
 
@@ -31,7 +32,7 @@ Log::Level g_log_level = Log::kWarning;
 int64 g_start_time = 0;
 
 // Array indices are the Log::Level enum values.
-const char* kLevelToName[] = {
+const char* const kLevelToName[] = {
   "ALL",  // kAll
   "DEBUG",  // kDebug
   "INFO",  // kInfo
@@ -149,6 +150,26 @@ scoped_ptr<base::ListValue> WebDriverLog::GetAndClearEntries() {
   return ret.Pass();
 }
 
+std::string WebDriverLog::GetFirstErrorMessage() const {
+  for (base::ListValue::iterator it = entries_->begin();
+       it != entries_->end();
+       ++it) {
+    base::DictionaryValue* log_entry = NULL;
+    (*it)->GetAsDictionary(&log_entry);
+    if (log_entry != NULL) {
+      std::string level;
+      if (log_entry->GetString("level", &level)) {
+        if (level == kLevelToName[Log::kError]) {
+          std::string message;
+          if (log_entry->GetString("message", &message))
+            return message;
+        }
+      }
+    }
+  }
+  return std::string();
+}
+
 void WebDriverLog::AddEntryTimestamped(const base::Time& timestamp,
                                        Log::Level level,
                                        const std::string& source,
@@ -182,7 +203,7 @@ bool InitLogging() {
   InitLogging(&InternalIsVLogOn);
   g_start_time = base::TimeTicks::Now().ToInternalValue();
 
-  CommandLine* cmd_line = CommandLine::ForCurrentProcess();
+  base::CommandLine* cmd_line = base::CommandLine::ForCurrentProcess();
   if (cmd_line->HasSwitch("log-path")) {
     g_log_level = Log::kInfo;
     base::FilePath log_path = cmd_line->GetSwitchValuePath("log-path");
@@ -218,10 +239,13 @@ bool InitLogging() {
 }
 
 Status CreateLogs(const Capabilities& capabilities,
+                  const Session* session,
                   ScopedVector<WebDriverLog>* out_logs,
-                  ScopedVector<DevToolsEventListener>* out_listeners) {
+                  ScopedVector<DevToolsEventListener>* out_devtools_listeners,
+                  ScopedVector<CommandListener>* out_command_listeners) {
   ScopedVector<WebDriverLog> logs;
-  ScopedVector<DevToolsEventListener> listeners;
+  ScopedVector<DevToolsEventListener> devtools_listeners;
+  ScopedVector<CommandListener> command_listeners;
   Log::Level browser_log_level = Log::kWarning;
   const LoggingPrefs& prefs = capabilities.logging_prefs;
 
@@ -234,7 +258,17 @@ Status CreateLogs(const Capabilities& capabilities,
       if (level != Log::kOff) {
         WebDriverLog* log = new WebDriverLog(type, Log::kAll);
         logs.push_back(log);
-        listeners.push_back(new PerformanceLogger(log));
+        PerformanceLogger* perf_log =
+            new PerformanceLogger(log, session,
+                                  capabilities.perf_logging_prefs);
+        // We use a proxy for |perf_log|'s |CommandListener| interface.
+        // Otherwise, |perf_log| would be owned by both session->xwalk and
+        // |session|, which would lead to memory errors on destruction.
+        // session->xwalk will own |perf_log|, and |session| will own |proxy|.
+        // session->command_listeners (the proxy) will be destroyed first.
+        CommandListenerProxy* proxy = new CommandListenerProxy(perf_log);
+        devtools_listeners.push_back(perf_log);
+        command_listeners.push_back(proxy);
       }
     } else if (type == WebDriverLog::kBrowserType) {
       browser_log_level = level;
@@ -251,9 +285,10 @@ Status CreateLogs(const Capabilities& capabilities,
   logs.push_back(browser_log);
   // If the level is OFF, don't even bother listening for DevTools events.
   if (browser_log_level != Log::kOff)
-    listeners.push_back(new ConsoleLogger(browser_log));
+    devtools_listeners.push_back(new ConsoleLogger(browser_log));
 
   out_logs->swap(logs);
-  out_listeners->swap(listeners);
+  out_devtools_listeners->swap(devtools_listeners);
+  out_command_listeners->swap(command_listeners);
   return Status(kOk);
 }

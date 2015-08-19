@@ -9,11 +9,10 @@
 #include "base/lazy_instance.h"
 #include "base/threading/thread_local.h"
 #include "base/values.h"
-#include "xwalk/test/xwalkdriver/logging.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/xwalk/version.h"
-#include "xwalk/test/xwalkdriver/xwalk/web_view.h"
 #include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/xwalk/web_view.h"
+#include "xwalk/test/xwalkdriver/logging.h"
 
 namespace {
 
@@ -39,7 +38,8 @@ Session::Session(const std::string& id)
       force_devtools_screenshot(false),
       sticky_modifiers(0),
       mouse_position(0, 0),
-      page_load_timeout(kDefaultPageLoadTimeout) {}
+      page_load_timeout(kDefaultPageLoadTimeout),
+      auto_reporting_enabled(false) {}
 
 Session::Session(const std::string& id, scoped_ptr<Xwalk> xwalk)
     : id(id),
@@ -49,7 +49,8 @@ Session::Session(const std::string& id, scoped_ptr<Xwalk> xwalk)
       xwalk(xwalk.Pass()),
       sticky_modifiers(0),
       mouse_position(0, 0),
-      page_load_timeout(kDefaultPageLoadTimeout) {}
+      page_load_timeout(kDefaultPageLoadTimeout),
+      auto_reporting_enabled(false) {}
 
 Session::~Session() {}
 
@@ -65,6 +66,11 @@ Status Session::GetTargetWindow(WebView** web_view) {
 
 void Session::SwitchToTopFrame() {
   frames.clear();
+}
+
+void Session::SwitchToParentFrame() {
+  if (!frames.empty())
+    frames.pop_back();
 }
 
 void Session::SwitchToSubFrame(const std::string& frame_id,
@@ -91,6 +97,19 @@ std::vector<WebDriverLog*> Session::GetAllLogs() const {
   if (driver_log)
     logs.push_back(driver_log.get());
   return logs;
+}
+
+std::string Session::GetFirstBrowserError() const {
+  for (ScopedVector<WebDriverLog>::const_iterator it = devtools_logs.begin();
+       it != devtools_logs.end();
+       ++it) {
+    if ((*it)->type() == WebDriverLog::kBrowserType) {
+      std::string message = (*it)->GetFirstErrorMessage();
+      if (!message.empty())
+        return message;
+    }
+  }
+  return std::string();
 }
 
 Session* GetThreadLocalSession() {

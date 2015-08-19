@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "xwalk/test/xwalkdriver/xwalk/stub_xwalk.h"
-
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view.h"
 
@@ -11,16 +10,12 @@ StubXwalk::StubXwalk() {}
 
 StubXwalk::~StubXwalk() {}
 
-XwalkDesktopImpl* StubXwalk::GetAsDesktop() {
-  return NULL;
+Status StubXwalk::GetAsDesktop(XwalkDesktopImpl** desktop) {
+  return Status(kUnknownError, "not supported");
 }
 
-std::string StubXwalk::GetVersion() {
-  return std::string();
-}
-
-int StubXwalk::GetBuildNo() {
-  return 9999;
+const BrowserInfo* StubXwalk::GetBrowserInfo() const {
+  return &browser_info_;
 }
 
 bool StubXwalk::HasCrashedWebView() {
@@ -45,6 +40,14 @@ Status StubXwalk::ActivateWebView(const std::string& id) {
 
 std::string StubXwalk::GetOperatingSystemName() {
   return std::string();
+}
+
+bool StubXwalk::IsMobileEmulationEnabled() const {
+  return false;
+}
+
+bool StubXwalk::HasTouchScreen() const {
+  return false;
 }
 
 Status StubXwalk::Quit() {

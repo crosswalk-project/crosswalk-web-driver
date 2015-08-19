@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_LOG_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_LOG_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_LOG_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_LOG_H_
 
 #include <string>
 
@@ -58,4 +58,4 @@ std::string FormatValueForDisplay(const base::Value& value);
 // Returns a pretty printed json string, after truncating long strings.
 std::string FormatJsonForDisplay(const std::string& json);
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_LOG_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_LOG_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_ELEMENT_UTIL_H_
-#define XWALK_TEST_XWALKDRIVER_ELEMENT_UTIL_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_ELEMENT_UTIL_H_
+#define CHROME_TEST_CHROMEDRIVER_ELEMENT_UTIL_H_
 
 #include <string>
 
@@ -127,10 +127,16 @@ Status ToggleOptionElement(
     WebView* web_view,
     const std::string& element_id);
 
+// |offset| is an optional offset from the top-left of the first ClientRect
+// that is returned by the element's getClientRects() function.
+// If |offset| is null, the |location| returned will be the center of the
+// ClientRect. If it is non-null, |location| will be offset by the specified
+// value.
 Status ScrollElementIntoView(
     Session* session,
     WebView* web_view,
     const std::string& element_id,
+    const WebPoint* offset,
     WebPoint* location);
 
 // |element_id| refers to the element which is to be scrolled into view.
@@ -147,4 +153,4 @@ Status ScrollElementRegionIntoView(
     const std::string& clickable_element_id,
     WebPoint* location);
 
-#endif  // XWALK_TEST_XWALKDRIVER_ELEMENT_UTIL_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_ELEMENT_UTIL_H_

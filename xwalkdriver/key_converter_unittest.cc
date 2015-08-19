@@ -7,15 +7,15 @@
 
 #include "base/strings/string16.h"
 #include "base/strings/utf_string_conversions.h"
-#include "testing/gtest/include/gtest/gtest.h"
-#include "xwalk/test/xwalkdriver/key_converter.h"
-#include "xwalk/test/xwalkdriver/test_util.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
+#include "xwalk/test/xwalkdriver/key_converter.h"
+#include "xwalk/test/xwalkdriver/test_util.h"
+#include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
 
-void CheckEvents(const string16& keys,
+void CheckEvents(const base::string16& keys,
                  KeyEvent expected_events[],
                  bool release_modifiers,
                  size_t expected_size,
@@ -40,7 +40,7 @@ void CheckEvents(const string16& keys,
   EXPECT_EQ(expected_modifiers, modifiers);
 }
 
-void CheckEventsReleaseModifiers(const string16& keys,
+void CheckEventsReleaseModifiers(const base::string16& keys,
                                  KeyEvent expected_events[],
                                  size_t expected_size) {
   CheckEvents(keys, expected_events, true /* release_modifier */,
@@ -50,7 +50,7 @@ void CheckEventsReleaseModifiers(const string16& keys,
 void CheckEventsReleaseModifiers(const std::string& keys,
                                  KeyEvent expected_events[],
                                  size_t expected_size) {
-  CheckEventsReleaseModifiers(UTF8ToUTF16(keys),
+  CheckEventsReleaseModifiers(base::UTF8ToUTF16(keys),
       expected_events, expected_size);
 }
 
@@ -59,7 +59,7 @@ void CheckNonShiftChar(ui::KeyboardCode key_code, char character) {
   std::string char_string;
   char_string.push_back(character);
   std::list<KeyEvent> events;
-  EXPECT_EQ(kOk, ConvertKeysToKeyEvents(ASCIIToUTF16(char_string),
+  EXPECT_EQ(kOk, ConvertKeysToKeyEvents(base::ASCIIToUTF16(char_string),
                                         true /* release_modifiers*/,
                                         &modifiers, &events).code());
   ASSERT_EQ(3u, events.size()) << "Char: " << character;
@@ -79,7 +79,7 @@ void CheckShiftChar(ui::KeyboardCode key_code, char character, char lower) {
   std::string char_string;
   char_string.push_back(character);
   std::list<KeyEvent> events;
-  EXPECT_EQ(kOk, ConvertKeysToKeyEvents(ASCIIToUTF16(char_string),
+  EXPECT_EQ(kOk, ConvertKeysToKeyEvents(base::ASCIIToUTF16(char_string),
                                         true /* release_modifiers*/,
                                         &modifiers, &events).code());
   ASSERT_EQ(5u, events.size()) << "Char: " << character;
@@ -135,8 +135,8 @@ TEST(KeyConverter, WebDriverSpecialChar) {
       CreateKeyDownEvent(ui::VKEY_SPACE, 0),
       CreateCharEvent(" ", " ", 0),
       CreateKeyUpEvent(ui::VKEY_SPACE, 0)};
-  string16 keys;
-  keys.push_back(static_cast<char16>(0xE00DU));
+  base::string16 keys;
+  keys.push_back(static_cast<base::char16>(0xE00DU));
   CheckEventsReleaseModifiers(keys, event_array, arraysize(event_array));
 }
 
@@ -144,17 +144,18 @@ TEST(KeyConverter, WebDriverSpecialNonCharKey) {
   KeyEvent event_array[] = {
       CreateKeyDownEvent(ui::VKEY_F1, 0),
       CreateKeyUpEvent(ui::VKEY_F1, 0)};
-  string16 keys;
-  keys.push_back(static_cast<char16>(0xE031U));
+  base::string16 keys;
+  keys.push_back(static_cast<base::char16>(0xE031U));
   CheckEventsReleaseModifiers(keys, event_array, arraysize(event_array));
 }
 
 TEST(KeyConverter, FrenchKeyOnEnglishLayout) {
   KeyEvent event_array[] = {
       CreateKeyDownEvent(ui::VKEY_UNKNOWN, 0),
-      CreateCharEvent(WideToUTF8(L"\u00E9"), WideToUTF8(L"\u00E9"), 0),
+      CreateCharEvent(base::WideToUTF8(L"\u00E9"),
+                      base::WideToUTF8(L"\u00E9"), 0),
       CreateKeyUpEvent(ui::VKEY_UNKNOWN, 0)};
-  CheckEventsReleaseModifiers(WideToUTF16(L"\u00E9"),
+  CheckEventsReleaseModifiers(base::WideToUTF16(L"\u00E9"),
       event_array, arraysize(event_array));
 }
 
@@ -208,9 +209,9 @@ TEST(KeyConverter, UppercaseCharUsesShiftOnlyIfNecessary) {
       CreateCharEvent("c", "C", kShiftKeyModifierMask),
       CreateKeyUpEvent(ui::VKEY_C, kShiftKeyModifierMask),
       CreateKeyUpEvent(ui::VKEY_SHIFT, 0)};
-  string16 keys;
-  keys.push_back(static_cast<char16>(0xE008U));
-  keys.append(UTF8ToUTF16("aBc"));
+  base::string16 keys;
+  keys.push_back(static_cast<base::char16>(0xE008U));
+  keys.append(base::UTF8ToUTF16("aBc"));
   CheckEventsReleaseModifiers(keys, event_array, arraysize(event_array));
 }
 
@@ -224,20 +225,20 @@ TEST(KeyConverter, ToggleModifiers) {
       CreateKeyUpEvent(ui::VKEY_MENU, 0),
       CreateKeyDownEvent(ui::VKEY_COMMAND, kMetaKeyModifierMask),
       CreateKeyUpEvent(ui::VKEY_COMMAND, 0)};
-  string16 keys;
-  keys.push_back(static_cast<char16>(0xE008U));
-  keys.push_back(static_cast<char16>(0xE008U));
-  keys.push_back(static_cast<char16>(0xE009U));
-  keys.push_back(static_cast<char16>(0xE009U));
-  keys.push_back(static_cast<char16>(0xE00AU));
-  keys.push_back(static_cast<char16>(0xE00AU));
-  keys.push_back(static_cast<char16>(0xE03DU));
-  keys.push_back(static_cast<char16>(0xE03DU));
+  base::string16 keys;
+  keys.push_back(static_cast<base::char16>(0xE008U));
+  keys.push_back(static_cast<base::char16>(0xE008U));
+  keys.push_back(static_cast<base::char16>(0xE009U));
+  keys.push_back(static_cast<base::char16>(0xE009U));
+  keys.push_back(static_cast<base::char16>(0xE00AU));
+  keys.push_back(static_cast<base::char16>(0xE00AU));
+  keys.push_back(static_cast<base::char16>(0xE03DU));
+  keys.push_back(static_cast<base::char16>(0xE03DU));
   CheckEventsReleaseModifiers(keys, event_array, arraysize(event_array));
 }
 
 #if defined(OS_WIN)
-// https://code.google.com/p/chromedriver/issues/detail?id=546
+// https://code.google.com/p/xwalkdriver/issues/detail?id=546
 #define MAYBE_AllShorthandKeys DISABLED_AllShorthandKeys
 #else
 #define MAYBE_AllShorthandKeys AllShorthandKeys
@@ -265,7 +266,7 @@ TEST(KeyConverter, MAYBE_AllShorthandKeys) {
       CreateCharEvent(" ", " ", 0),
       CreateKeyUpEvent(ui::VKEY_SPACE, 0)};
   CheckEventsReleaseModifiers("\n\r\n\t\b ",
-      event_array,arraysize(event_array));  // NOLINT
+      event_array,arraysize(event_array));
 }
 
 #if defined(OS_LINUX)
@@ -276,7 +277,7 @@ TEST(KeyConverter, MAYBE_AllShorthandKeys) {
 #endif
 
 TEST(KeyConverter, MAYBE_AllEnglishKeyboardSymbols) {
-  string16 keys;
+  base::string16 keys;
   const ui::KeyboardCode kSymbolKeyCodes[] = {
       ui::VKEY_OEM_3,
       ui::VKEY_OEM_MINUS,
@@ -321,8 +322,8 @@ TEST(KeyConverter, AllEnglishKeyboardTextChars) {
 }
 
 #if defined(OS_LINUX) || defined(OS_WIN)
-// https://code.google.com/p/chromedriver/issues/detail?id=240
-// https://code.google.com/p/chromedriver/issues/detail?id=546
+// https://code.google.com/p/xwalkdriver/issues/detail?id=240
+// https://code.google.com/p/xwalkdriver/issues/detail?id=546
 #define MAYBE_AllSpecialWebDriverKeysOnEnglishKeyboard \
     DISABLED_AllSpecialWebDriverKeysOnEnglishKeyboard
 #else
@@ -344,7 +345,7 @@ TEST(KeyConverter, MAYBE_AllSpecialWebDriverKeysOnEnglishKeyboard) {
   for (size_t i = 0; i <= 0x3D; ++i) {
     if (i > 0x29 && i < 0x31)
       continue;
-    string16 keys;
+    base::string16 keys;
     int modifiers = 0;
     keys.push_back(0xE000U + i);
     std::list<KeyEvent> events;
@@ -385,11 +386,11 @@ TEST(KeyConverter, ModifiersState) {
       CreateKeyDownEvent(ui::VKEY_CONTROL, control_key_modifier),
       CreateKeyDownEvent(ui::VKEY_MENU, alt_key_modifier),
       CreateKeyDownEvent(ui::VKEY_COMMAND, meta_key_modifier)};
-  string16 keys;
-  keys.push_back(static_cast<char16>(0xE008U));
-  keys.push_back(static_cast<char16>(0xE009U));
-  keys.push_back(static_cast<char16>(0xE00AU));
-  keys.push_back(static_cast<char16>(0xE03DU));
+  base::string16 keys;
+  keys.push_back(static_cast<base::char16>(0xE008U));
+  keys.push_back(static_cast<base::char16>(0xE009U));
+  keys.push_back(static_cast<base::char16>(0xE00AU));
+  keys.push_back(static_cast<base::char16>(0xE03DU));
 
   CheckEvents(keys, event_array, false /* release_modifiers */,
       arraysize(event_array), meta_key_modifier);
@@ -402,9 +403,9 @@ TEST(KeyConverter, ReleaseModifiers) {
           kShiftKeyModifierMask | kControlKeyModifierMask),
       CreateKeyUpEvent(ui::VKEY_SHIFT, 0),
       CreateKeyUpEvent(ui::VKEY_CONTROL, 0)};
-  string16 keys;
-  keys.push_back(static_cast<char16>(0xE008U));
-  keys.push_back(static_cast<char16>(0xE009U));
+  base::string16 keys;
+  keys.push_back(static_cast<base::char16>(0xE008U));
+  keys.push_back(static_cast<base::char16>(0xE009U));
 
   CheckEvents(keys, event_array, true /* release_modifiers */,
       arraysize(event_array), 0);

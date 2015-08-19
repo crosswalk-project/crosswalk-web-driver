@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_STUB_XWALK_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_STUB_XWALK_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_STUB_CHROME_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_STUB_CHROME_H_
 
 #include <list>
-#include <string>
 
 #include "base/compiler_specific.h"
+#include "base/memory/scoped_ptr.h"
+#include "xwalk/test/xwalkdriver/xwalk/browser_info.h"
 #include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
 
 class Status;
@@ -17,20 +18,23 @@ class WebView;
 class StubXwalk : public Xwalk {
  public:
   StubXwalk();
-  virtual ~StubXwalk();
+  ~StubXwalk() override;
 
   // Overridden from Xwalk:
-  virtual XwalkDesktopImpl* GetAsDesktop() override;
-  virtual std::string GetVersion() override;
-  virtual int GetBuildNo() override;
-  virtual bool HasCrashedWebView() override;
-  virtual Status GetWebViewIds(std::list<std::string>* web_view_ids) override;
-  virtual Status GetWebViewById(const std::string& id,
-                                WebView** web_view) override;
-  virtual Status CloseWebView(const std::string& id) override;
-  virtual Status ActivateWebView(const std::string& id) override;
-  virtual std::string GetOperatingSystemName() override;
-  virtual Status Quit() override;
+  Status GetAsDesktop(XwalkDesktopImpl** desktop) override;
+  const BrowserInfo* GetBrowserInfo() const override;
+  bool HasCrashedWebView() override;
+  Status GetWebViewIds(std::list<std::string>* web_view_ids) override;
+  Status GetWebViewById(const std::string& id, WebView** web_view) override;
+  Status CloseWebView(const std::string& id) override;
+  Status ActivateWebView(const std::string& id) override;
+  std::string GetOperatingSystemName() override;
+  bool IsMobileEmulationEnabled() const override;
+  bool HasTouchScreen() const override;
+  Status Quit() override;
+
+ private:
+  BrowserInfo browser_info_;
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_STUB_XWALK_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_STUB_CHROME_H_

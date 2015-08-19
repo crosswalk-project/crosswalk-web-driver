@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_GEOPOSITION_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_GEOPOSITION_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_GEOPOSITION_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_GEOPOSITION_H_
 
 struct Geoposition {
   double latitude;
@@ -11,4 +11,4 @@ struct Geoposition {
   double accuracy;
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_GEOPOSITION_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_GEOPOSITION_H_

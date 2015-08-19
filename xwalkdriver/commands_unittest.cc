@@ -8,23 +8,25 @@
 #include "base/callback.h"
 #include "base/compiler_specific.h"
 #include "base/files/file_path.h"
+#include "base/location.h"
 #include "base/memory/scoped_ptr.h"
-#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
+#include "base/single_thread_task_runner.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/thread.h"
 #include "base/values.h"
-#include "testing/gtest/include/gtest/gtest.h"
-#include "third_party/webdriver/atoms.h"
+#include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/xwalk/stub_xwalk.h"
+#include "xwalk/test/xwalkdriver/xwalk/stub_web_view.h"
+#include "xwalk/test/xwalkdriver/xwalk/web_view.h"
+#include "xwalk/test/xwalkdriver/command_listener_proxy.h"
 #include "xwalk/test/xwalkdriver/commands.h"
 #include "xwalk/test/xwalkdriver/element_commands.h"
 #include "xwalk/test/xwalkdriver/session.h"
 #include "xwalk/test/xwalkdriver/session_commands.h"
 #include "xwalk/test/xwalkdriver/window_commands.h"
-#include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/xwalk/stub_web_view.h"
-#include "xwalk/test/xwalkdriver/xwalk/stub_xwalk.h"
-#include "xwalk/test/xwalkdriver/xwalk/web_view.h"
+#include "testing/gtest/include/gtest/gtest.h"
+#include "third_party/webdriver/atoms.h"
 
 namespace {
 
@@ -46,6 +48,100 @@ void OnGetStatus(const Status& status,
 TEST(CommandsTest, GetStatus) {
   base::DictionaryValue params;
   ExecuteGetStatus(params, std::string(), base::Bind(&OnGetStatus));
+}
+
+namespace {
+
+void ExecuteStubGetSession(int* count,
+                           const base::DictionaryValue& params,
+                           const std::string& session_id,
+                           const CommandCallback& callback) {
+  if (*count == 0) {
+    EXPECT_STREQ("id", session_id.c_str());
+  } else {
+    EXPECT_STREQ("id2", session_id.c_str());
+  }
+  (*count)++;
+
+  scoped_ptr<base::DictionaryValue> capabilities(new base::DictionaryValue());
+
+  capabilities->Set("capability1", new base::StringValue("test1"));
+  capabilities->Set("capability2", new base::StringValue("test2"));
+
+  callback.Run(Status(kOk), capabilities.Pass(), session_id);
+}
+
+void OnGetSessions(const Status& status,
+                   scoped_ptr<base::Value> value,
+                   const std::string& session_id) {
+  ASSERT_EQ(kOk, status.code());
+  ASSERT_TRUE(value.get());
+  base::ListValue* sessions;
+  ASSERT_TRUE(value->GetAsList(&sessions));
+  ASSERT_EQ(static_cast<size_t>(2), sessions->GetSize());
+
+  base::DictionaryValue* session1;
+  base::DictionaryValue* session2;
+  ASSERT_TRUE(sessions->GetDictionary(0, &session1));
+  ASSERT_TRUE(sessions->GetDictionary(1, &session2));
+
+  ASSERT_EQ(static_cast<size_t>(2), session1->size());
+  ASSERT_EQ(static_cast<size_t>(2), session2->size());
+
+  std::string session1_id;
+  std::string session2_id;
+  base::DictionaryValue* session1_capabilities;
+  base::DictionaryValue* session2_capabilities;
+
+  ASSERT_TRUE(session1->GetString("sessionId", &session1_id));
+  ASSERT_TRUE(session2->GetString("sessionId", &session2_id));
+  ASSERT_TRUE(session1->GetDictionary("capabilities", &session1_capabilities));
+  ASSERT_TRUE(session2->GetDictionary("capabilities", &session2_capabilities));
+
+  ASSERT_EQ((size_t) 2, session1_capabilities->size());
+  ASSERT_EQ((size_t) 2, session2_capabilities->size());
+  ASSERT_EQ("id", session1_id);
+  ASSERT_EQ("id2", session2_id);
+
+  std::string session1_capability1;
+  std::string session1_capability2;
+  std::string session2_capability1;
+  std::string session2_capability2;
+
+  ASSERT_TRUE(session1_capabilities->GetString("capability1",
+    &session1_capability1));
+  ASSERT_TRUE(session1_capabilities->GetString("capability2",
+    &session1_capability2));
+  ASSERT_TRUE(session2_capabilities->GetString("capability1",
+    &session2_capability1));
+  ASSERT_TRUE(session2_capabilities->GetString("capability2",
+    &session2_capability2));
+
+  ASSERT_EQ("test1", session1_capability1);
+  ASSERT_EQ("test2", session1_capability2);
+  ASSERT_EQ("test1", session2_capability1);
+  ASSERT_EQ("test2", session2_capability2);
+}
+
+}  // namespace
+
+TEST(CommandsTest, GetSessions) {
+  SessionThreadMap map;
+  Session session("id");
+  Session session2("id2");
+  map[session.id] = make_linked_ptr(new base::Thread("1"));
+  map[session2.id] = make_linked_ptr(new base::Thread("2"));
+
+  int count = 0;
+
+  Command cmd = base::Bind(&ExecuteStubGetSession, &count);
+
+  base::DictionaryValue params;
+  base::MessageLoop loop;
+
+  ExecuteGetSessions(cmd, &map, params, std::string(),
+                     base::Bind(&OnGetSessions));
+  ASSERT_EQ(2, count);
 }
 
 namespace {
@@ -123,7 +219,7 @@ TEST(CommandsTest, ExecuteSessionCommand) {
   linked_ptr<base::Thread> thread(new base::Thread("1"));
   ASSERT_TRUE(thread->Start());
   std::string id("id");
-  thread->message_loop()->PostTask(
+  thread->task_runner()->PostTask(
       FROM_HERE,
       base::Bind(&internal::CreateSessionOnSessionThreadForTesting, id));
   map[id] = thread;
@@ -265,14 +361,14 @@ class FindElementWebView : public StubWebView {
       }
       case kElementNotExistsQueryOnce: {
         if (only_one_)
-          result_.reset(base::Value::CreateNullValue());
+          result_ = base::Value::CreateNullValue();
         else
           result_.reset(new base::ListValue());
         break;
       }
     }
   }
-  virtual ~FindElementWebView() {}
+  ~FindElementWebView() override {}
 
   void Verify(const std::string& expected_frame,
               const base::ListValue* expected_args,
@@ -291,16 +387,16 @@ class FindElementWebView : public StubWebView {
   }
 
   // Overridden from WebView:
-  virtual Status CallFunction(const std::string& frame,
-                              const std::string& function,
-                              const base::ListValue& args,
-                              scoped_ptr<base::Value>* result) override {
+  Status CallFunction(const std::string& frame,
+                      const std::string& function,
+                      const base::ListValue& args,
+                      scoped_ptr<base::Value>* result) override {
     ++current_count_;
     if (scenario_ == kElementExistsTimeout ||
         (scenario_ == kElementExistsQueryTwice && current_count_ == 1)) {
         // Always return empty result when testing timeout.
         if (only_one_)
-          result->reset(base::Value::CreateNullValue());
+          *result = base::Value::CreateNullValue();
         else
           result->reset(new base::ListValue());
     } else {
@@ -319,10 +415,10 @@ class FindElementWebView : public StubWebView {
         }
       }
 
-      result->reset(result_->DeepCopy());
+      *result = result_->CreateDeepCopy();
       frame_ = frame;
       function_ = function;
-      args_.reset(args.DeepCopy());
+      args_ = args.CreateDeepCopy();
     }
     return Status(kOk);
   }
@@ -500,13 +596,13 @@ class ErrorCallFunctionWebView : public StubWebView {
  public:
   explicit ErrorCallFunctionWebView(StatusCode code)
       : StubWebView("1"), code_(code) {}
-  virtual ~ErrorCallFunctionWebView() {}
+  ~ErrorCallFunctionWebView() override {}
 
   // Overridden from WebView:
-  virtual Status CallFunction(const std::string& frame,
-                              const std::string& function,
-                              const base::ListValue& args,
-                              scoped_ptr<base::Value>* result) override {
+  Status CallFunction(const std::string& frame,
+                      const std::string& function,
+                      const base::ListValue& args,
+                      scoped_ptr<base::Value>* result) override {
     return Status(code_);
   }
 
@@ -545,4 +641,183 @@ TEST(CommandsTest, ErrorFindChildElement) {
       kStaleElementReference,
       ExecuteFindChildElements(
           1, &session, &web_view, element_id, params, &result).code());
+}
+
+namespace {
+
+class MockCommandListener : public CommandListener {
+ public:
+  MockCommandListener() : called_(false) {}
+  ~MockCommandListener() override {}
+
+  Status BeforeCommand(const std::string& command_name) override {
+    called_ = true;
+    EXPECT_STREQ("cmd", command_name.c_str());
+    return Status(kOk);
+  }
+
+  void VerifyCalled() {
+    EXPECT_TRUE(called_);
+  }
+
+  void VerifyNotCalled() {
+    EXPECT_FALSE(called_);
+  }
+
+ private:
+  bool called_;
+};
+
+Status ExecuteAddListenerToSessionCommand(
+    CommandListener* listener,
+    Session* session,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* return_value) {
+  session->command_listeners.push_back(listener);
+  return Status(kOk);
+}
+
+Status ExecuteQuitSessionCommand(
+    Session* session,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* return_value) {
+  session->quit = true;
+  return Status(kOk);
+}
+
+void OnSessionCommand(
+    base::RunLoop* run_loop,
+    const Status& status,
+    scoped_ptr<base::Value> value,
+    const std::string& session_id) {
+  ASSERT_EQ(kOk, status.code());
+  run_loop->Quit();
+}
+
+}  // namespace
+
+TEST(CommandsTest, SuccessNotifyingCommandListeners) {
+  SessionThreadMap map;
+  linked_ptr<base::Thread> thread(new base::Thread("1"));
+  ASSERT_TRUE(thread->Start());
+  std::string id("id");
+  thread->task_runner()->PostTask(
+      FROM_HERE,
+      base::Bind(&internal::CreateSessionOnSessionThreadForTesting, id));
+
+  map[id] = thread;
+
+  base::DictionaryValue params;
+  scoped_ptr<MockCommandListener> listener(new MockCommandListener());
+  CommandListenerProxy* proxy = new CommandListenerProxy(listener.get());
+  // We add |proxy| to the session instead of adding |listener| directly so that
+  // after the session is destroyed by ExecuteQuitSessionCommand, we can still
+  // verify the listener was called. The session owns and will destroy |proxy|.
+  SessionCommand cmd = base::Bind(&ExecuteAddListenerToSessionCommand, proxy);
+  base::MessageLoop loop;
+  base::RunLoop run_loop_addlistener;
+
+  // |CommandListener|s are notified immediately before commands are run.
+  // Here, the command adds |listener| to the session, so |listener|
+  // should not be notified since it will not have been added yet.
+  ExecuteSessionCommand(
+      &map,
+      "cmd",
+      cmd,
+      false,
+      params,
+      id,
+      base::Bind(&OnSessionCommand, &run_loop_addlistener));
+  run_loop_addlistener.Run();
+
+  listener->VerifyNotCalled();
+
+  base::RunLoop run_loop_testlistener;
+  cmd = base::Bind(&ExecuteQuitSessionCommand);
+
+  // |listener| was added to |session| by ExecuteAddListenerToSessionCommand
+  // and should be notified before the next command, ExecuteQuitSessionCommand.
+  ExecuteSessionCommand(
+      &map,
+      "cmd",
+      cmd,
+      false,
+      params,
+      id,
+      base::Bind(&OnSessionCommand, &run_loop_testlistener));
+  run_loop_testlistener.Run();
+
+  listener->VerifyCalled();
+}
+
+namespace {
+
+class FailingCommandListener : public CommandListener {
+ public:
+  FailingCommandListener() {}
+  ~FailingCommandListener() override {}
+
+  Status BeforeCommand(const std::string& command_name) override {
+    return Status(kUnknownError);
+  }
+};
+
+void AddListenerToSessionIfSessionExists(CommandListener* listener) {
+  Session* session = GetThreadLocalSession();
+  if (session) {
+    session->command_listeners.push_back(listener);
+  }
+}
+
+void OnFailBecauseErrorNotifyingListeners(
+    base::RunLoop* run_loop,
+    const Status& status,
+    scoped_ptr<base::Value> value,
+    const std::string& session_id) {
+  EXPECT_EQ(kUnknownError, status.code());
+  EXPECT_FALSE(value.get());
+  run_loop->Quit();
+}
+
+void VerifySessionWasDeleted() {
+  ASSERT_FALSE(GetThreadLocalSession());
+}
+
+}  // namespace
+
+TEST(CommandsTest, ErrorNotifyingCommandListeners) {
+  SessionThreadMap map;
+  linked_ptr<base::Thread> thread(new base::Thread("1"));
+  ASSERT_TRUE(thread->Start());
+  std::string id("id");
+  thread->task_runner()->PostTask(
+      FROM_HERE,
+      base::Bind(&internal::CreateSessionOnSessionThreadForTesting, id));
+  map[id] = thread;
+
+  // In SuccessNotifyingCommandListenersBeforeCommand, we verified BeforeCommand
+  // was called before (as opposed to after) command execution. We don't need to
+  // verify this again, so we can just add |listener| with PostTask.
+  CommandListener* listener = new FailingCommandListener();
+  thread->task_runner()->PostTask(
+      FROM_HERE, base::Bind(&AddListenerToSessionIfSessionExists, listener));
+
+  base::DictionaryValue params;
+  // The command should never be executed if BeforeCommand fails for a listener.
+  SessionCommand cmd = base::Bind(&ShouldNotBeCalled);
+  base::MessageLoop loop;
+  base::RunLoop run_loop;
+
+  ExecuteSessionCommand(
+      &map,
+      "cmd",
+      cmd,
+      false,
+      params,
+      id,
+      base::Bind(&OnFailBecauseErrorNotifyingListeners, &run_loop));
+  run_loop.Run();
+
+  thread->task_runner()->PostTask(FROM_HERE,
+                                  base::Bind(&VerifySessionWasDeleted));
 }

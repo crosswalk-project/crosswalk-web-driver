@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 #include "base/values.h"
-#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/capabilities.h"
-#include "xwalk/test/xwalkdriver/logging.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_event_listener.h"
 #include "xwalk/test/xwalkdriver/xwalk/log.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/command_listener.h"
+#include "xwalk/test/xwalkdriver/logging.h"
+#include "xwalk/test/xwalkdriver/session.h"
+#include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
 
@@ -98,40 +100,68 @@ TEST(WebDriverLog, All) {
 
 TEST(Logging, CreatePerformanceLog) {
   Capabilities capabilities;
+  Session session("test");
   capabilities.logging_prefs["performance"] = Log::kInfo;
   capabilities.logging_prefs["browser"] = Log::kInfo;
 
-  ScopedVector<DevToolsEventListener> listeners;
+  ScopedVector<DevToolsEventListener> devtools_listeners;
   ScopedVector<WebDriverLog> logs;
-  Status status = CreateLogs(capabilities, &logs, &listeners);
+  ScopedVector<CommandListener> command_listeners;
+  Status status = CreateLogs(capabilities, &session, &logs, &devtools_listeners,
+                             &command_listeners);
   ASSERT_TRUE(status.IsOk());
   ASSERT_EQ(2u, logs.size());
-  ASSERT_EQ(2u, listeners.size());
+  ASSERT_EQ(2u, devtools_listeners.size());
+  ASSERT_EQ(1u, command_listeners.size());
   ASSERT_EQ("performance", logs[0]->type());
   ASSERT_EQ("browser", logs[1]->type());
 }
 
 TEST(Logging, IgnoreUnknownLogType) {
   Capabilities capabilities;
+  Session session("test");
   capabilities.logging_prefs["gaga"] = Log::kInfo;
 
-  ScopedVector<DevToolsEventListener> listeners;
+  ScopedVector<DevToolsEventListener> devtools_listeners;
   ScopedVector<WebDriverLog> logs;
-  Status status = CreateLogs(capabilities, &logs, &listeners);
+  ScopedVector<CommandListener> command_listeners;
+  Status status = CreateLogs(capabilities, &session, &logs, &devtools_listeners,
+                             &command_listeners);
   EXPECT_TRUE(status.IsOk());
   ASSERT_EQ(1u, logs.size());
-  ASSERT_EQ(1u, listeners.size());
+  ASSERT_EQ(1u, devtools_listeners.size());
+  ASSERT_EQ(0u, command_listeners.size());
   ASSERT_EQ("browser", logs[0]->type());
 }
 
 TEST(Logging, DefaultLogs) {
   Capabilities capabilities;
+  Session session("test");
 
-  ScopedVector<DevToolsEventListener> listeners;
+  ScopedVector<DevToolsEventListener> devtools_listeners;
   ScopedVector<WebDriverLog> logs;
-  Status status = CreateLogs(capabilities, &logs, &listeners);
+  ScopedVector<CommandListener> command_listeners;
+  Status status = CreateLogs(capabilities, &session, &logs, &devtools_listeners,
+                             &command_listeners);
   EXPECT_TRUE(status.IsOk());
   ASSERT_EQ(1u, logs.size());
-  ASSERT_EQ(1u, listeners.size());
+  ASSERT_EQ(1u, devtools_listeners.size());
+  ASSERT_EQ(0u, command_listeners.size());
   ASSERT_EQ("browser", logs[0]->type());
+}
+
+TEST(Logging, GetFirstErrorMessage) {
+  WebDriverLog log(WebDriverLog::kBrowserType, Log::kAll);
+  std::string entry;
+
+  entry = log.GetFirstErrorMessage();
+  ASSERT_TRUE(entry.empty());
+
+  log.AddEntry(Log::kInfo, "info message");
+  log.AddEntry(Log::kError, "first error message");
+  log.AddEntry(Log::kDebug, "debug message");
+  log.AddEntry(Log::kError, "second error message");
+
+  entry = log.GetFirstErrorMessage();
+  ASSERT_EQ("first error message", entry);
 }

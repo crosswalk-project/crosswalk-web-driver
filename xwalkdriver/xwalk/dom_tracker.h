@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_DOM_TRACKER_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_DOM_TRACKER_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_DOM_TRACKER_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_DOM_TRACKER_H_
 
 #include <map>
 #include <string>
@@ -24,15 +24,15 @@ class Status;
 class DomTracker : public DevToolsEventListener {
  public:
   explicit DomTracker(DevToolsClient* client);
-  virtual ~DomTracker();
+  ~DomTracker() override;
 
   Status GetFrameIdForNode(int node_id, std::string* frame_id);
 
   // Overridden from DevToolsEventListener:
-  virtual Status OnConnected(DevToolsClient* client) override;
-  virtual Status OnEvent(DevToolsClient* client,
-                         const std::string& method,
-                         const base::DictionaryValue& params) override;
+  Status OnConnected(DevToolsClient* client) override;
+  Status OnEvent(DevToolsClient* client,
+                 const std::string& method,
+                 const base::DictionaryValue& params) override;
 
  private:
   bool ProcessNodeList(const base::Value* nodes);
@@ -43,4 +43,4 @@ class DomTracker : public DevToolsEventListener {
   DISALLOW_COPY_AND_ASSIGN(DomTracker);
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_DOM_TRACKER_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_DOM_TRACKER_H_

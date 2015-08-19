@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_NET_SYNC_WEBSOCKET_IMPL_H_
-#define XWALK_TEST_XWALKDRIVER_NET_SYNC_WEBSOCKET_IMPL_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_NET_SYNC_WEBSOCKET_IMPL_H_
+#define CHROME_TEST_CHROMEDRIVER_NET_SYNC_WEBSOCKET_IMPL_H_
 
 #include <list>
 #include <string>
@@ -14,10 +14,9 @@
 #include "base/memory/scoped_ptr.h"
 #include "base/synchronization/condition_variable.h"
 #include "base/synchronization/lock.h"
-#include "net/base/completion_callback.h"
-#include "net/socket_stream/socket_stream.h"
 #include "xwalk/test/xwalkdriver/net/sync_websocket.h"
 #include "xwalk/test/xwalkdriver/net/websocket.h"
+#include "net/base/completion_callback.h"
 
 namespace base {
 class WaitableEvent;
@@ -32,16 +31,15 @@ class GURL;
 class SyncWebSocketImpl : public SyncWebSocket {
  public:
   explicit SyncWebSocketImpl(net::URLRequestContextGetter* context_getter);
-  virtual ~SyncWebSocketImpl();
+  ~SyncWebSocketImpl() override;
 
   // Overridden from SyncWebSocket:
-  virtual bool IsConnected() override;
-  virtual bool Connect(const GURL& url) override;
-  virtual bool Send(const std::string& message) override;
-  virtual StatusCode ReceiveNextMessage(
-      std::string* message,
-      const base::TimeDelta& timeout) override;
-  virtual bool HasNextMessage() override;
+  bool IsConnected() override;
+  bool Connect(const GURL& url) override;
+  bool Send(const std::string& message) override;
+  StatusCode ReceiveNextMessage(std::string* message,
+                                const base::TimeDelta& timeout) override;
+  bool HasNextMessage() override;
 
  private:
   struct CoreTraits;
@@ -59,15 +57,15 @@ class SyncWebSocketImpl : public SyncWebSocket {
     bool HasNextMessage();
 
     // Overriden from WebSocketListener:
-    virtual void OnMessageReceived(const std::string& message) override;
-    virtual void OnClose() override;
+    void OnMessageReceived(const std::string& message) override;
+    void OnClose() override;
 
    private:
     friend class base::RefCountedThreadSafe<Core, CoreTraits>;
     friend class base::DeleteHelper<Core>;
     friend struct CoreTraits;
 
-    virtual ~Core();
+    ~Core() override;
 
     void ConnectOnIO(const GURL& url,
                      bool* success,
@@ -109,4 +107,4 @@ struct SyncWebSocketImpl::CoreTraits {
   }
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_NET_SYNC_WEBSOCKET_IMPL_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_NET_SYNC_WEBSOCKET_IMPL_H_

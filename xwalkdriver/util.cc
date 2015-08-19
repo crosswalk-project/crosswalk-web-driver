@@ -4,24 +4,27 @@
 
 #include "xwalk/test/xwalkdriver/util.h"
 
-#include <list>
-
 #include "base/base64.h"
 #include "base/files/file_enumerator.h"
 #include "base/files/file_util.h"
 #include "base/files/scoped_temp_dir.h"
 #include "base/format_macros.h"
+#include "base/memory/scoped_vector.h"
 #include "base/rand_util.h"
 #include "base/strings/string16.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/third_party/icu/icu_utf.h"
 #include "base/values.h"
-#include "third_party/zlib/google/zip.h"
-#include "xwalk/test/xwalkdriver/key_converter.h"
+#include "xwalk/test/xwalkdriver/xwalk/browser_info.h"
+#include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view.h"
+#include "xwalk/test/xwalkdriver/command_listener.h"
+#include "xwalk/test/xwalkdriver/key_converter.h"
+#include "xwalk/test/xwalkdriver/session.h"
+#include "third_party/zlib/google/zip.h"
 
 std::string GenerateId() {
   uint64 msb = base::RandUint64();
@@ -401,5 +404,38 @@ Status UnzipSoleFile(const base::FilePath& unzip_dir,
     return Status(kUnknownError, "contained multiple files");
 
   *file = first_file;
+  return Status(kOk);
+}
+
+Status NotifyCommandListenersBeforeCommand(Session* session,
+                                           const std::string& command_name) {
+  for (ScopedVector<CommandListener>::const_iterator it =
+       session->command_listeners.begin();
+       it != session->command_listeners.end();
+       ++it) {
+    Status status = (*it)->BeforeCommand(command_name);
+    if (status.IsError()) {
+      // Do not continue if an error is encountered. Mark session for deletion,
+      // quit Xwalk if necessary, and return a detailed error.
+      if (!session->quit) {
+        session->quit = true;
+        std::string message = base::StringPrintf("session deleted because "
+            "error encountered when notifying listeners of '%s' command",
+            command_name.c_str());
+        if (session->xwalk && !session->detach) {
+          Status quit_status = session->xwalk->Quit();
+          if (quit_status.IsError())
+            message += ", but failed to kill browser:" + quit_status.message();
+        }
+        status = Status(kUnknownError, message, status);
+      }
+      if (session->xwalk) {
+        const BrowserInfo* browser_info = session->xwalk->GetBrowserInfo();
+        status.AddDetails("Session info: " + browser_info->browser_name + "=" +
+                          browser_info->browser_version);
+      }
+      return status;
+    }
+  }
   return Status(kOk);
 }

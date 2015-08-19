@@ -7,16 +7,15 @@
 #include "base/compiler_specific.h"
 #include "base/memory/ref_counted.h"
 #include "base/message_loop/message_loop.h"
-#include "base/message_loop/message_loop_proxy.h"
 #include "base/single_thread_task_runner.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread.h"
 #include "base/time/time.h"
-#include "testing/gtest/include/gtest/gtest.h"
-#include "url/gurl.h"
 #include "xwalk/test/xwalkdriver/net/sync_websocket_impl.h"
 #include "xwalk/test/xwalkdriver/net/test_http_server.h"
 #include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
+#include "testing/gtest/include/gtest/gtest.h"
+#include "url/gurl.h"
 
 namespace {
 
@@ -25,19 +24,16 @@ class SyncWebSocketImplTest : public testing::Test {
   SyncWebSocketImplTest()
       : client_thread_("ClientThread"),
         long_timeout_(base::TimeDelta::FromMinutes(1)) {}
-  virtual ~SyncWebSocketImplTest() {}
+  ~SyncWebSocketImplTest() override {}
 
-  virtual void SetUp() override {
+  void SetUp() override {
     base::Thread::Options options(base::MessageLoop::TYPE_IO, 0);
     ASSERT_TRUE(client_thread_.StartWithOptions(options));
-    context_getter_ = new URLRequestContextGetter(
-        client_thread_.message_loop_proxy());
+    context_getter_ = new URLRequestContextGetter(client_thread_.task_runner());
     ASSERT_TRUE(server_.Start());
   }
 
-  virtual void TearDown() override {
-    server_.Stop();
-  }
+  void TearDown() override { server_.Stop(); }
 
   base::Thread client_thread_;
   TestHttpServer server_;

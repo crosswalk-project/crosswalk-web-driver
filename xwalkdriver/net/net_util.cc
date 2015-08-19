@@ -12,10 +12,10 @@
 #include "base/message_loop/message_loop.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
+#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 #include "net/url_request/url_fetcher.h"
 #include "net/url_request/url_fetcher_delegate.h"
 #include "url/gurl.h"
-#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 
 namespace {
 
@@ -26,7 +26,7 @@ class SyncUrlFetcher : public net::URLFetcherDelegate {
                  std::string* response)
       : url_(url), getter_(getter), response_(response), event_(false, false) {}
 
-  virtual ~SyncUrlFetcher() {}
+  ~SyncUrlFetcher() override {}
 
   bool Fetch() {
     getter_->GetNetworkTaskRunner()->PostTask(
@@ -37,12 +37,12 @@ class SyncUrlFetcher : public net::URLFetcherDelegate {
   }
 
   void FetchOnIOThread() {
-    fetcher_.reset(net::URLFetcher::Create(url_, net::URLFetcher::GET, this));
+    fetcher_ = net::URLFetcher::Create(url_, net::URLFetcher::GET, this);
     fetcher_->SetRequestContext(getter_);
     fetcher_->Start();
   }
 
-  virtual void OnURLFetchComplete(const net::URLFetcher* source) override {
+  void OnURLFetchComplete(const net::URLFetcher* source) override {
     success_ = (source->GetResponseCode() == 200);
     if (success_)
       success_ = source->GetResponseAsString(response_);

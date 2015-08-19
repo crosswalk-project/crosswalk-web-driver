@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_JAVASCRIPT_DIALOG_MANAGER_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_JAVASCRIPT_DIALOG_MANAGER_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_JAVASCRIPT_DIALOG_MANAGER_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_JAVASCRIPT_DIALOG_MANAGER_H_
 
 #include <list>
 #include <string>
@@ -23,7 +23,7 @@ class Status;
 class JavaScriptDialogManager : public DevToolsEventListener {
  public:
   explicit JavaScriptDialogManager(DevToolsClient* client);
-  virtual ~JavaScriptDialogManager();
+  ~JavaScriptDialogManager() override;
 
   bool IsDialogOpen();
 
@@ -32,10 +32,10 @@ class JavaScriptDialogManager : public DevToolsEventListener {
   Status HandleDialog(bool accept, const std::string* text);
 
   // Overridden from DevToolsEventListener:
-  virtual Status OnConnected(DevToolsClient* client) override;
-  virtual Status OnEvent(DevToolsClient* client,
-                         const std::string& method,
-                         const base::DictionaryValue& params) override;
+  Status OnConnected(DevToolsClient* client) override;
+  Status OnEvent(DevToolsClient* client,
+                 const std::string& method,
+                 const base::DictionaryValue& params) override;
 
  private:
   DevToolsClient* client_;
@@ -48,4 +48,4 @@ class JavaScriptDialogManager : public DevToolsEventListener {
   DISALLOW_COPY_AND_ASSIGN(JavaScriptDialogManager);
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_JAVASCRIPT_DIALOG_MANAGER_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_JAVASCRIPT_DIALOG_MANAGER_H_

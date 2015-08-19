@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_XWALK_DESKTOP_IMPL_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_XWALK_DESKTOP_IMPL_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_CHROME_DESKTOP_IMPL_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_CHROME_DESKTOP_IMPL_H_
 
 #include <string>
 
@@ -18,6 +18,8 @@ namespace base {
 class TimeDelta;
 }
 
+class AutomationExtension;
+class DevToolsClient;
 class DevToolsHttpClient;
 class Status;
 class WebView;
@@ -25,13 +27,15 @@ class WebView;
 class XwalkDesktopImpl : public XwalkImpl {
  public:
   XwalkDesktopImpl(
-      scoped_ptr<DevToolsHttpClient> client,
+      scoped_ptr<DevToolsHttpClient> http_client,
+      scoped_ptr<DevToolsClient> websocket_client,
       ScopedVector<DevToolsEventListener>& devtools_event_listeners,
       scoped_ptr<PortReservation> port_reservation,
-      base::ProcessHandle process,
-      const CommandLine& command,
+      base::Process process,
+      const base::CommandLine& command,
+      base::ScopedTempDir* user_data_dir,
       base::ScopedTempDir* extension_dir);
-  virtual ~XwalkDesktopImpl();
+  ~XwalkDesktopImpl() override;
 
   // Waits for a page with the given URL to appear and finish loading.
   // Returns an error if the timeout is exceeded.
@@ -39,19 +43,32 @@ class XwalkDesktopImpl : public XwalkImpl {
                            const base::TimeDelta& timeout,
                            scoped_ptr<WebView>* web_view);
 
-  // Overridden from Xwalk
-  virtual XwalkDesktopImpl* GetAsDesktop() override;
-  virtual std::string GetOperatingSystemName() override;
+  // Gets the installed automation extension.
+  Status GetAutomationExtension(AutomationExtension** extension);
+
+  // Overridden from Xwalk:
+  Status GetAsDesktop(XwalkDesktopImpl** desktop) override;
+  std::string GetOperatingSystemName() override;
 
   // Overridden from XwalkImpl:
-  virtual Status QuitImpl() override;
+  bool IsMobileEmulationEnabled() const override;
+  bool HasTouchScreen() const override;
+  Status QuitImpl() override;
 
-  const CommandLine& command() const;
+  const base::CommandLine& command() const;
+
+  Status WaitForNewAppWindow(const base::TimeDelta& timeout,
+                             const std::string& app_id,
+                             std::string* web_view_id);
 
  private:
-  base::ProcessHandle process_;
-  CommandLine command_;
+  base::Process process_;
+  base::CommandLine command_;
+  base::ScopedTempDir user_data_dir_;
   base::ScopedTempDir extension_dir_;
+
+  // Lazily initialized, may be null.
+  scoped_ptr<AutomationExtension> automation_extension_;
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_XWALK_DESKTOP_IMPL_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_CHROME_DESKTOP_IMPL_H_

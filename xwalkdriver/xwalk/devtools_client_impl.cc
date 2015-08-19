@@ -10,16 +10,16 @@
 #include "base/logging.h"
 #include "base/strings/stringprintf.h"
 #include "base/values.h"
-#include "xwalk/test/xwalkdriver/net/sync_websocket.h"
-#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_event_listener.h"
 #include "xwalk/test/xwalkdriver/xwalk/log.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/util.h"
+#include "xwalk/test/xwalkdriver/net/sync_websocket.h"
+#include "xwalk/test/xwalkdriver/net/url_request_context_getter.h"
 
 namespace {
 
-const char* kInspectorContextError =
+const char kInspectorContextError[] =
     "Execution context with given id not found.";
 
 Status ParseInspectorError(const std::string& error_json) {
@@ -53,6 +53,10 @@ Status ConditionIsMet(bool* is_condition_met) {
   return Status(kOk);
 }
 
+Status FakeCloseFrontends() {
+  return Status(kOk);
+}
+
 }  // namespace
 
 namespace internal {
@@ -66,6 +70,22 @@ InspectorCommandResponse::InspectorCommandResponse() {}
 InspectorCommandResponse::~InspectorCommandResponse() {}
 
 }  // namespace internal
+
+const char DevToolsClientImpl::kBrowserwideDevToolsClientId[] = "browser";
+
+DevToolsClientImpl::DevToolsClientImpl(
+    const SyncWebSocketFactory& factory,
+    const std::string& url,
+    const std::string& id)
+    : socket_(factory.Run().Pass()),
+      url_(url),
+      crashed_(false),
+      id_(id),
+      frontend_closer_func_(base::Bind(&FakeCloseFrontends)),
+      parser_func_(base::Bind(&internal::ParseInspectorMessage)),
+      unnotified_event_(NULL),
+      next_id_(1),
+      stack_count_(0) {}
 
 DevToolsClientImpl::DevToolsClientImpl(
     const SyncWebSocketFactory& factory,
@@ -143,7 +163,14 @@ Status DevToolsClientImpl::SendCommand(
     const std::string& method,
     const base::DictionaryValue& params) {
   scoped_ptr<base::DictionaryValue> result;
-  return SendCommandInternal(method, params, &result);
+  return SendCommandInternal(method, params, &result, true);
+}
+
+Status DevToolsClientImpl::SendAsyncCommand(
+    const std::string& method,
+    const base::DictionaryValue& params) {
+  scoped_ptr<base::DictionaryValue> result;
+  return SendCommandInternal(method, params, &result, false);
 }
 
 Status DevToolsClientImpl::SendCommandAndGetResult(
@@ -151,7 +178,8 @@ Status DevToolsClientImpl::SendCommandAndGetResult(
     const base::DictionaryValue& params,
     scoped_ptr<base::DictionaryValue>* result) {
   scoped_ptr<base::DictionaryValue> intermediate_result;
-  Status status = SendCommandInternal(method, params, &intermediate_result);
+  Status status = SendCommandInternal(
+      method, params, &intermediate_result, true);
   if (status.IsError())
     return status;
   if (!intermediate_result)
@@ -201,7 +229,8 @@ DevToolsClientImpl::ResponseInfo::~ResponseInfo() {}
 Status DevToolsClientImpl::SendCommandInternal(
     const std::string& method,
     const base::DictionaryValue& params,
-    scoped_ptr<base::DictionaryValue>* result) {
+    scoped_ptr<base::DictionaryValue>* result,
+    bool wait_for_response) {
   if (!socket_->IsConnected())
     return Status(kDisconnected, "not connected to DevTools");
 
@@ -218,27 +247,29 @@ Status DevToolsClientImpl::SendCommandInternal(
   if (!socket_->Send(message))
     return Status(kDisconnected, "unable to send message to renderer");
 
-  linked_ptr<ResponseInfo> response_info =
-      make_linked_ptr(new ResponseInfo(method));
-  response_info_map_[command_id] = response_info;
-  while (response_info->state == kWaiting) {
-    Status status = ProcessNextMessage(
-        command_id, base::TimeDelta::FromMinutes(10));
-    if (status.IsError()) {
-      if (response_info->state == kReceived)
-        response_info_map_.erase(command_id);
-      return status;
+  if (wait_for_response) {
+    linked_ptr<ResponseInfo> response_info =
+        make_linked_ptr(new ResponseInfo(method));
+    response_info_map_[command_id] = response_info;
+    while (response_info->state == kWaiting) {
+      Status status = ProcessNextMessage(
+          command_id, base::TimeDelta::FromMinutes(10));
+      if (status.IsError()) {
+        if (response_info->state == kReceived)
+          response_info_map_.erase(command_id);
+        return status;
+      }
     }
+    if (response_info->state == kBlocked) {
+      response_info->state = kIgnored;
+      return Status(kUnexpectedAlertOpen);
+    }
+    CHECK_EQ(response_info->state, kReceived);
+    internal::InspectorCommandResponse& response = response_info->response;
+    if (!response.result)
+      return ParseInspectorError(response.error);
+    *result = response.result.Pass();
   }
-  if (response_info->state == kBlocked) {
-    response_info->state = kIgnored;
-    return Status(kUnexpectedAlertOpen);
-  }
-  CHECK_EQ(response_info->state, kReceived);
-  internal::InspectorCommandResponse& response = response_info->response;
-  if (!response.result)
-    return ParseInspectorError(response.error);
-  *result = response.result.Pass();
   return Status(kOk);
 }
 
@@ -257,10 +288,14 @@ Status DevToolsClientImpl::ProcessNextMessage(
   if (status.IsError())
     return status;
 
-  // The command response may have already been received or blocked while
-  // notifying listeners.
-  if (expected_id != -1 && response_info_map_[expected_id]->state != kWaiting)
-    return Status(kOk);
+  // The command response may have already been received (in which case it will
+  // have been deleted from |response_info_map_|) or blocked while notifying
+  // listeners.
+  if (expected_id != -1) {
+    ResponseInfoMap::iterator iter = response_info_map_.find(expected_id);
+    if (iter == response_info_map_.end() || iter->second->state != kWaiting)
+      return Status(kOk);
+  }
 
   if (crashed_)
     return Status(kTabCrashed);
@@ -363,12 +398,9 @@ Status DevToolsClientImpl::ProcessCommandResponse(
     return Status(kUnknownError, "unexpected command response");
 
   linked_ptr<ResponseInfo> response_info = response_info_map_[response.id];
-  if (response_info->state == kReceived)
-    return Status(kUnknownError, "received multiple command responses");
+  response_info_map_.erase(response.id);
 
-  if (response_info->state == kIgnored) {
-    response_info_map_.erase(response.id);
-  } else {
+  if (response_info->state != kIgnored) {
     response_info->state = kReceived;
     response_info->response.id = response.id;
     response_info->response.error = response.error;
@@ -454,16 +486,19 @@ bool ParseInspectorMessage(
   } else if (message_dict->GetInteger("id", &id)) {
     base::DictionaryValue* unscoped_error = NULL;
     base::DictionaryValue* unscoped_result = NULL;
-    if (!message_dict->GetDictionary("error", &unscoped_error) &&
-        !message_dict->GetDictionary("result", &unscoped_result))
-      return false;
-
     *type = kCommandResponseMessageType;
     command_response->id = id;
-    if (unscoped_result)
+    // As per Chromium issue 392577, DevTools does not necessarily return a
+    // "result" dictionary for every valid response. In particular,
+    // Tracing.start and Tracing.end command responses do not contain one.
+    // So, if neither "error" nor "result" keys are present, just provide
+    // a blank result dictionary.
+    if (message_dict->GetDictionary("result", &unscoped_result))
       command_response->result.reset(unscoped_result->DeepCopy());
-    else
+    else if (message_dict->GetDictionary("error", &unscoped_error))
       base::JSONWriter::Write(unscoped_error, &command_response->error);
+    else
+      command_response->result.reset(new base::DictionaryValue());
     return true;
   }
   return false;

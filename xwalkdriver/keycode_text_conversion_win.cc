@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <windows.h>
-#include <cctype>
-
-#include "base/strings/utf_string_conversions.h"
 #include "xwalk/test/xwalkdriver/keycode_text_conversion.h"
+
+//#include <VersionHelpers.h>
+#include <stdlib.h>
+#include <windows.h>
+
+#include "base/memory/scoped_ptr.h"
+#include "base/strings/utf_string_conversions.h"
 #include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
 
 bool ConvertKeyCodeToText(
@@ -24,19 +27,19 @@ bool ConvertKeyCodeToText(
     keyboard_state[VK_MENU] |= 0x80;
   wchar_t chars[5];
   int code = ::ToUnicode(key_code, scan_code, keyboard_state, chars, 4, 0);
-  // |ToUnicode| converts some non-text key codes like F1 to various ASCII
+  // |ToUnicode| converts some non-text key codes like F1 to various
   // control chars. Filter those out.
-  if (code <= 0 || (code == 1 && std::iscntrl(chars[0])))
+  if (code <= 0 || (code == 1 && iswcntrl(chars[0])))
     *text = std::string();
   else
-    WideToUTF8(chars, code, text);
+    base::WideToUTF8(chars, code, text);
   return true;
 }
 
 bool ConvertCharToKeyCode(
-    char16 key, ui::KeyboardCode* key_code, int *necessary_modifiers,
+    base::char16 key, ui::KeyboardCode* key_code, int *necessary_modifiers,
     std::string* error_msg) {
-  short vkey_and_modifiers = ::VkKeyScanW(key);  // NOLINT
+  short vkey_and_modifiers = ::VkKeyScanW(key);
   bool translated = vkey_and_modifiers != -1 &&
                     LOBYTE(vkey_and_modifiers) != 0xFF &&
                     HIBYTE(vkey_and_modifiers) != 0xFF;
@@ -55,4 +58,37 @@ bool ConvertCharToKeyCode(
     *necessary_modifiers = modifiers;
   }
   return translated;
+}
+
+bool SwitchToUSKeyboardLayout() {
+  // For LoadKeyboardLayout - Prior to Windows 8: If the specified input
+  // locale identifier is not already loaded, the function loads and
+  // activates the input locale identifier for the current thread.
+  // Beginning in Windows 8: If the specified input locale identifier is not
+  // already loaded, the function loads and activates the input
+  // locale identifier for the system.
+  // For Windows 8 - Use ActivateKeyboardLayout instead of LoadKeyboardLayout
+  LPCTSTR kUsKeyboardLayout = TEXT("00000409");
+
+  if (IsWindows8OrGreater()) {
+    int size;
+    TCHAR active_keyboard[KL_NAMELENGTH];
+
+    if ((size = ::GetKeyboardLayoutList(0, NULL)) <= 0)
+      return false;
+
+    scoped_ptr<HKL[]> keyboard_handles_list(new HKL[size]);
+    ::GetKeyboardLayoutList(size, keyboard_handles_list.get());
+
+    for (int keyboard_index = 0; keyboard_index < size; keyboard_index++) {
+      ::ActivateKeyboardLayout(keyboard_handles_list[keyboard_index],
+          KLF_SETFORPROCESS);
+      ::GetKeyboardLayoutName(active_keyboard);
+      if (wcscmp(active_keyboard, kUsKeyboardLayout) == 0)
+        return true;
+    }
+    return false;
+  } else {
+    return ::LoadKeyboardLayout(kUsKeyboardLayout, KLF_ACTIVATE) != NULL;
+  }
 }

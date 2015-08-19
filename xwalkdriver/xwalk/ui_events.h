@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_UI_EVENTS_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_UI_EVENTS_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_UI_EVENTS_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_UI_EVENTS_H_
 
 #include <string>
 
@@ -95,4 +95,4 @@ struct KeyEvent {
   ui::KeyboardCode key_code;
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_UI_EVENTS_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_UI_EVENTS_H_

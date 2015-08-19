@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_NET_PORT_SERVER_H_
-#define XWALK_TEST_XWALKDRIVER_NET_PORT_SERVER_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_NET_PORT_SERVER_H_
+#define CHROME_TEST_CHROMEDRIVER_NET_PORT_SERVER_H_
 
 #include <list>
 #include <set>
@@ -17,14 +17,14 @@ class Status;
 
 class PortReservation {
  public:
-  PortReservation(const base::Closure& on_free_func, int port);
+  PortReservation(const base::Closure& on_free_func, uint16 port);
   ~PortReservation();
 
   void Leak();
 
  private:
   base::Closure on_free_func_;
-  int port_;
+  uint16 port_;
 };
 
 // Communicates with a port reservation management server.
@@ -35,34 +35,40 @@ class PortServer {
   explicit PortServer(const std::string& path);
   ~PortServer();
 
-  Status ReservePort(int* port, scoped_ptr<PortReservation>* reservation);
+  Status ReservePort(uint16* port, scoped_ptr<PortReservation>* reservation);
 
  private:
-  Status RequestPort(int* port);
-  void ReleasePort(int port);
+  Status RequestPort(uint16* port);
+  void ReleasePort(uint16 port);
 
   std::string path_;
 
   base::Lock free_lock_;
-  std::list<int> free_;
+  std::list<uint16> free_;
 };
 
 // Manages reservation of a block of local ports.
 class PortManager {
  public:
-  PortManager(int min_port, int max_port);
+  PortManager(uint16 min_port, uint16 max_port);
   ~PortManager();
 
-  Status ReservePort(int* port, scoped_ptr<PortReservation>* reservation);
+  Status ReservePort(uint16* port, scoped_ptr<PortReservation>* reservation);
+  // Since we cannot remove forwarded adb ports on older SDKs,
+  // maintain a pool of forwarded ports for reuse.
+  Status ReservePortFromPool(uint16* port,
+                             scoped_ptr<PortReservation>* reservation);
 
  private:
-  void ReleasePort(int port);
+  uint16 FindAvailablePort() const;
+  void ReleasePort(uint16 port);
+  void ReleasePortToPool(uint16 port);
 
-  base::Lock taken_lock_;
-  std::set<int> taken_;
-
-  int min_port_;
-  int max_port_;
+  base::Lock lock_;
+  std::set<uint16> taken_;
+  std::list<uint16> unused_forwarded_port_;
+  uint16 min_port_;
+  uint16 max_port_;
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_NET_PORT_SERVER_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_NET_PORT_SERVER_H_

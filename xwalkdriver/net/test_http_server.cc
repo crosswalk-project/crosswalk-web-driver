@@ -7,14 +7,16 @@
 #include "base/bind.h"
 #include "base/location.h"
 #include "base/message_loop/message_loop.h"
-#include "base/message_loop/message_loop_proxy.h"
+#include "base/single_thread_task_runner.h"
 #include "base/strings/stringprintf.h"
 #include "base/time/time.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
 #include "net/server/http_server_request_info.h"
-#include "net/socket/tcp_listen_socket.h"
+#include "net/socket/tcp_server_socket.h"
 #include "testing/gtest/include/gtest/gtest.h"
+
+const int kBufferSize = 100 * 1024 * 1024;  // 100 MB
 
 TestHttpServer::TestHttpServer()
     : thread_("ServerThread"),
@@ -34,10 +36,9 @@ bool TestHttpServer::Start() {
     return false;
   bool success;
   base::WaitableEvent event(false, false);
-  thread_.message_loop_proxy()->PostTask(
-      FROM_HERE,
-      base::Bind(&TestHttpServer::StartOnServerThread,
-                 base::Unretained(this), &success, &event));
+  thread_.task_runner()->PostTask(
+      FROM_HERE, base::Bind(&TestHttpServer::StartOnServerThread,
+                            base::Unretained(this), &success, &event));
   event.Wait();
   return success;
 }
@@ -46,10 +47,9 @@ void TestHttpServer::Stop() {
   if (!thread_.IsRunning())
     return;
   base::WaitableEvent event(false, false);
-  thread_.message_loop_proxy()->PostTask(
-      FROM_HERE,
-      base::Bind(&TestHttpServer::StopOnServerThread,
-                 base::Unretained(this), &event));
+  thread_.task_runner()->PostTask(
+      FROM_HERE, base::Bind(&TestHttpServer::StopOnServerThread,
+                            base::Unretained(this), &event));
   event.Wait();
   thread_.Stop();
 }
@@ -73,6 +73,11 @@ GURL TestHttpServer::web_socket_url() const {
   return web_socket_url_;
 }
 
+void TestHttpServer::OnConnect(int connection_id) {
+  server_->SetSendBufferSize(connection_id, kBufferSize);
+  server_->SetReceiveBufferSize(connection_id, kBufferSize);
+}
+
 void TestHttpServer::OnWebSocketRequest(
     int connection_id,
     const net::HttpServerRequestInfo& info) {
@@ -92,10 +97,7 @@ void TestHttpServer::OnWebSocketRequest(
       server_->Send404(connection_id);
       break;
     case kClose:
-      // net::HttpServer doesn't allow us to close connection during callback.
-      base::MessageLoop::current()->PostTask(
-          FROM_HERE,
-          base::Bind(&net::HttpServer::Close, server_, connection_id));
+      server_->Close(connection_id);
       break;
   }
 }
@@ -112,10 +114,7 @@ void TestHttpServer::OnWebSocketMessage(int connection_id,
       server_->SendOverWebSocket(connection_id, data);
       break;
     case kCloseOnMessage:
-      // net::HttpServer doesn't allow us to close connection during callback.
-      base::MessageLoop::current()->PostTask(
-          FROM_HERE,
-          base::Bind(&net::HttpServer::Close, server_, connection_id));
+      server_->Close(connection_id);
       break;
   }
 }
@@ -128,8 +127,10 @@ void TestHttpServer::OnClose(int connection_id) {
 
 void TestHttpServer::StartOnServerThread(bool* success,
                                          base::WaitableEvent* event) {
-  net::TCPListenSocketFactory factory("127.0.0.1", 0);
-  server_ = new net::HttpServer(factory, this);
+  scoped_ptr<net::ServerSocket> server_socket(
+      new net::TCPServerSocket(NULL, net::NetLog::Source()));
+  server_socket->ListenWithAddressAndPort("127.0.0.1", 0, 1);
+  server_.reset(new net::HttpServer(server_socket.Pass(), this));
 
   net::IPEndPoint address;
   int error = server_->GetLocalAddress(&address);
@@ -139,14 +140,13 @@ void TestHttpServer::StartOnServerThread(bool* success,
     web_socket_url_ = GURL(base::StringPrintf("ws://127.0.0.1:%d",
                                               address.port()));
   } else {
-    server_ = NULL;
+    server_.reset(NULL);
   }
   *success = server_.get();
   event->Signal();
 }
 
 void TestHttpServer::StopOnServerThread(base::WaitableEvent* event) {
-  if (server_.get())
-    server_ = NULL;
+  server_.reset(NULL);
   event->Signal();
 }

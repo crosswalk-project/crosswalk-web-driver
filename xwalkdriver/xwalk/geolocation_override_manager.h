@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_GEOLOCATION_OVERRIDE_MANAGER_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_GEOLOCATION_OVERRIDE_MANAGER_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_GEOLOCATION_OVERRIDE_MANAGER_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_GEOLOCATION_OVERRIDE_MANAGER_H_
 
 #include <string>
 
@@ -25,15 +25,15 @@ class Status;
 class GeolocationOverrideManager : public DevToolsEventListener {
  public:
   explicit GeolocationOverrideManager(DevToolsClient* client);
-  virtual ~GeolocationOverrideManager();
+  ~GeolocationOverrideManager() override;
 
   Status OverrideGeolocation(const Geoposition& geoposition);
 
   // Overridden from DevToolsEventListener:
-  virtual Status OnConnected(DevToolsClient* client) override;
-  virtual Status OnEvent(DevToolsClient* client,
-                         const std::string& method,
-                         const base::DictionaryValue& params) override;
+  Status OnConnected(DevToolsClient* client) override;
+  Status OnEvent(DevToolsClient* client,
+                 const std::string& method,
+                 const base::DictionaryValue& params) override;
 
  private:
   Status ApplyOverrideIfNeeded();
@@ -44,4 +44,4 @@ class GeolocationOverrideManager : public DevToolsEventListener {
   DISALLOW_COPY_AND_ASSIGN(GeolocationOverrideManager);
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_GEOLOCATION_OVERRIDE_MANAGER_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_GEOLOCATION_OVERRIDE_MANAGER_H_

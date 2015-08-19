@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_KEYCODE_TEXT_CONVERSION_H_
-#define XWALK_TEST_XWALKDRIVER_KEYCODE_TEXT_CONVERSION_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_KEYCODE_TEXT_CONVERSION_H_
+#define CHROME_TEST_CHROMEDRIVER_KEYCODE_TEXT_CONVERSION_H_
 
 #include <string>
 
@@ -29,7 +29,11 @@ bool ConvertKeyCodeToText(ui::KeyboardCode key_code,
 // it will be set to the empty string.
 bool ConvertCharToKeyCode(base::char16 key,
                           ui::KeyboardCode* key_code,
-                          int *necessary_modifiers,  // NOLINT
+                          int *necessary_modifiers,
                           std::string* error_msg);
 
-#endif  // XWALK_TEST_XWALKDRIVER_KEYCODE_TEXT_CONVERSION_H_
+#if defined(OS_WIN)
+bool SwitchToUSKeyboardLayout();
+#endif
+
+#endif  // CHROME_TEST_CHROMEDRIVER_KEYCODE_TEXT_CONVERSION_H_

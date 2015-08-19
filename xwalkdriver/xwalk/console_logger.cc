@@ -57,6 +57,7 @@ Status ConsoleLogger::OnEvent(
     if (message_dict->GetString("text", &text) && !text.empty() &&
         message_dict->GetString("level", &level_name) &&
         ConsoleLevelToLogLevel(level_name, &level)) {
+
       const char* origin_cstr = "unknown";
       std::string origin;
       if ((message_dict->GetString("url", &origin) && !origin.empty()) ||

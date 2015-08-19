@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_LOGGING_H_
-#define XWALK_TEST_XWALKDRIVER_LOGGING_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_LOGGING_H_
+#define CHROME_TEST_CHROMEDRIVER_LOGGING_H_
 
 #include <string>
 
@@ -14,8 +14,10 @@
 #include "xwalk/test/xwalkdriver/xwalk/log.h"
 
 struct Capabilities;
+class CommandListener;
 class DevToolsEventListener;
 class ListValue;
+struct Session;
 class Status;
 
 // Accumulates WebDriver Logging API entries of a given type and minimum level.
@@ -31,7 +33,7 @@ class WebDriverLog : public Log {
 
   // Creates a WebDriverLog with the given type and minimum level.
   WebDriverLog(const std::string& type, Level min_level);
-  virtual ~WebDriverLog();
+  ~WebDriverLog() override;
 
   // Returns entries accumulated so far, as a ListValue ready for serialization
   // into the wire protocol response to the "/log" command.
@@ -39,11 +41,15 @@ class WebDriverLog : public Log {
   // creates and owns a new empty ListValue for further accumulation.
   scoped_ptr<base::ListValue> GetAndClearEntries();
 
+  // Finds the first error message in the log and returns it. If none exist,
+  // returns an empty string. Does not clear entries.
+  std::string GetFirstErrorMessage() const;
+
   // Translates a Log entry level into a WebDriver level and stores the entry.
-  virtual void AddEntryTimestamped(const base::Time& timestamp,
-                                   Level level,
-                                   const std::string& source,
-                                   const std::string& message) override;
+  void AddEntryTimestamped(const base::Time& timestamp,
+                           Level level,
+                           const std::string& source,
+                           const std::string& message) override;
 
   const std::string& type() const;
   void set_min_level(Level min_level);
@@ -60,9 +66,12 @@ class WebDriverLog : public Log {
 // Initializes logging system for XwalkDriver. Returns true on success.
 bool InitLogging();
 
-// Creates Log's and DevToolsEventListener's based on logging preferences.
+// Creates |Log|s, |DevToolsEventListener|s, and |CommandListener|s based on
+// logging preferences.
 Status CreateLogs(const Capabilities& capabilities,
+                  const Session* session,
                   ScopedVector<WebDriverLog>* out_logs,
-                  ScopedVector<DevToolsEventListener>* out_listeners);
+                  ScopedVector<DevToolsEventListener>* out_devtools_listeners,
+                  ScopedVector<CommandListener>* out_command_listeners);
 
-#endif  // XWALK_TEST_XWALKDRIVER_LOGGING_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_LOGGING_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_XWALK_ANDROID_IMPL_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_XWALK_ANDROID_IMPL_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_CHROME_ANDROID_IMPL_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_CHROME_ANDROID_IMPL_H_
 
 #include <string>
 
@@ -12,25 +12,29 @@
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_impl.h"
 
 class Device;
+class DevToolsClient;
 class DevToolsHttpClient;
 
 class XwalkAndroidImpl : public XwalkImpl {
  public:
   XwalkAndroidImpl(
-      scoped_ptr<DevToolsHttpClient> client,
+      scoped_ptr<DevToolsHttpClient> http_client,
+      scoped_ptr<DevToolsClient> websocket_client,
       ScopedVector<DevToolsEventListener>& devtools_event_listeners,
       scoped_ptr<PortReservation> port_reservation,
       scoped_ptr<Device> device);
-  virtual ~XwalkAndroidImpl();
+  ~XwalkAndroidImpl() override;
 
-  // Overridden from Xwalk
-  virtual std::string GetOperatingSystemName() override;
+  // Overridden from Xwalk:
+  Status GetAsDesktop(XwalkDesktopImpl** desktop) override;
+  std::string GetOperatingSystemName() override;
 
   // Overridden from XwalkImpl:
-  virtual Status QuitImpl() override;
+  bool HasTouchScreen() const override;
+  Status QuitImpl() override;
 
  private:
   scoped_ptr<Device> device_;
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_XWALK_ANDROID_IMPL_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_CHROME_ANDROID_IMPL_H_

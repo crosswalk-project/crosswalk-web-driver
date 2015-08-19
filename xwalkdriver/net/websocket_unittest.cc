@@ -11,16 +11,15 @@
 #include "base/memory/ref_counted.h"
 #include "base/memory/scoped_ptr.h"
 #include "base/message_loop/message_loop.h"
-#include "base/message_loop/message_loop_proxy.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/threading/thread.h"
 #include "base/time/time.h"
+#include "xwalk/test/xwalkdriver/net/test_http_server.h"
+#include "xwalk/test/xwalkdriver/net/websocket.h"
 #include "net/url_request/url_request_test_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "url/gurl.h"
-#include "xwalk/test/xwalkdriver/net/test_http_server.h"
-#include "xwalk/test/xwalkdriver/net/websocket.h"
 
 namespace {
 
@@ -31,7 +30,7 @@ void OnConnectFinished(base::RunLoop* run_loop, int* save_error, int error) {
 
 void RunPending(base::MessageLoop* loop) {
   base::RunLoop run_loop;
-  loop->PostTask(FROM_HERE, run_loop.QuitClosure());
+  loop->task_runner()->PostTask(FROM_HERE, run_loop.QuitClosure());
   run_loop.Run();
 }
 
@@ -40,11 +39,9 @@ class Listener : public WebSocketListener {
   explicit Listener(const std::vector<std::string>& messages)
       : messages_(messages) {}
 
-  virtual ~Listener() {
-    EXPECT_TRUE(messages_.empty());
-  }
+  ~Listener() override { EXPECT_TRUE(messages_.empty()); }
 
-  virtual void OnMessageReceived(const std::string& message) override {
+  void OnMessageReceived(const std::string& message) override {
     ASSERT_TRUE(messages_.size());
     EXPECT_EQ(messages_[0], message);
     messages_.erase(messages_.begin());
@@ -52,9 +49,7 @@ class Listener : public WebSocketListener {
       base::MessageLoop::current()->Quit();
   }
 
-  virtual void OnClose() override {
-    EXPECT_TRUE(false);
-  }
+  void OnClose() override { EXPECT_TRUE(false); }
 
  private:
   std::vector<std::string> messages_;
@@ -65,13 +60,11 @@ class CloseListener : public WebSocketListener {
   explicit CloseListener(base::RunLoop* run_loop)
       : run_loop_(run_loop) {}
 
-  virtual ~CloseListener() {
-    EXPECT_FALSE(run_loop_);
-  }
+  ~CloseListener() override { EXPECT_FALSE(run_loop_); }
 
-  virtual void OnMessageReceived(const std::string& message) override {}
+  void OnMessageReceived(const std::string& message) override {}
 
-  virtual void OnClose() override {
+  void OnClose() override {
     EXPECT_TRUE(run_loop_);
     if (run_loop_)
       run_loop_->Quit();
@@ -85,15 +78,11 @@ class CloseListener : public WebSocketListener {
 class WebSocketTest : public testing::Test {
  public:
   WebSocketTest() {}
-  virtual ~WebSocketTest() {}
+  ~WebSocketTest() override {}
 
-  virtual void SetUp() override {
-    ASSERT_TRUE(server_.Start());
-  }
+  void SetUp() override { ASSERT_TRUE(server_.Start()); }
 
-  virtual void TearDown() override {
-    server_.Stop();
-  }
+  void TearDown() override { server_.Stop(); }
 
  protected:
   scoped_ptr<WebSocket> CreateWebSocket(const GURL& url,
@@ -102,9 +91,8 @@ class WebSocketTest : public testing::Test {
     scoped_ptr<WebSocket> sock(new WebSocket(url, listener));
     base::RunLoop run_loop;
     sock->Connect(base::Bind(&OnConnectFinished, &run_loop, &error));
-    loop_.PostDelayedTask(
-        FROM_HERE, run_loop.QuitClosure(),
-        base::TimeDelta::FromSeconds(10));
+    loop_.task_runner()->PostDelayedTask(FROM_HERE, run_loop.QuitClosure(),
+                                         base::TimeDelta::FromSeconds(10));
     run_loop.Run();
     if (error == net::OK)
       return sock.Pass();
@@ -123,9 +111,8 @@ class WebSocketTest : public testing::Test {
       ASSERT_TRUE(sock->Send(messages[i]));
     }
     base::RunLoop run_loop;
-    loop_.PostDelayedTask(
-        FROM_HERE, run_loop.QuitClosure(),
-        base::TimeDelta::FromSeconds(10));
+    loop_.task_runner()->PostDelayedTask(FROM_HERE, run_loop.QuitClosure(),
+                                         base::TimeDelta::FromSeconds(10));
     run_loop.Run();
   }
 
@@ -173,9 +160,8 @@ TEST_F(WebSocketTest, CloseOnReceive) {
   scoped_ptr<WebSocket> sock(CreateConnectedWebSocket(&listener));
   ASSERT_TRUE(sock);
   ASSERT_TRUE(sock->Send("hi"));
-  loop_.PostDelayedTask(
-      FROM_HERE, run_loop.QuitClosure(),
-      base::TimeDelta::FromSeconds(10));
+  loop_.task_runner()->PostDelayedTask(FROM_HERE, run_loop.QuitClosure(),
+                                       base::TimeDelta::FromSeconds(10));
   run_loop.Run();
 }
 
@@ -187,9 +173,8 @@ TEST_F(WebSocketTest, CloseOnSend) {
   server_.Stop();
 
   sock->Send("hi");
-  loop_.PostDelayedTask(
-      FROM_HERE, run_loop.QuitClosure(),
-      base::TimeDelta::FromSeconds(10));
+  loop_.task_runner()->PostDelayedTask(FROM_HERE, run_loop.QuitClosure(),
+                                       base::TimeDelta::FromSeconds(10));
   run_loop.Run();
   ASSERT_FALSE(sock->Send("hi"));
 }

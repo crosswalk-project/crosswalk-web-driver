@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_COMMANDS_H_
-#define XWALK_TEST_XWALKDRIVER_COMMANDS_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_COMMANDS_H_
+#define CHROME_TEST_CHROMEDRIVER_COMMANDS_H_
 
 #include <string>
 
@@ -31,6 +31,14 @@ void ExecuteGetStatus(
 void ExecuteCreateSession(
     SessionThreadMap* session_thread_map,
     const Command& init_session_cmd,
+    const base::DictionaryValue& params,
+    const std::string& session_id,
+    const CommandCallback& callback);
+
+// Gets all sessions
+void ExecuteGetSessions(
+    const Command& session_capabilities_command,
+    SessionThreadMap* session_thread_map,
     const base::DictionaryValue& params,
     const std::string& session_id,
     const CommandCallback& callback);
@@ -63,4 +71,4 @@ namespace internal {
 void CreateSessionOnSessionThreadForTesting(const std::string& id);
 }  // namespace internal
 
-#endif  // XWALK_TEST_XWALKDRIVER_COMMANDS_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_COMMANDS_H_

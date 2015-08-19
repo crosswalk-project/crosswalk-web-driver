@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_SERVER_HTTP_HANDLER_H_
-#define XWALK_TEST_XWALKDRIVER_SERVER_HTTP_HANDLER_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_SERVER_HTTP_HANDLER_H_
+#define CHROME_TEST_CHROMEDRIVER_SERVER_HTTP_HANDLER_H_
 
 #include <string>
 #include <vector>
@@ -33,6 +33,7 @@ class HttpServerRequestInfo;
 class HttpServerResponseInfo;
 }
 
+class Adb;
 class DeviceManager;
 class PortManager;
 class PortServer;
@@ -64,6 +65,7 @@ class HttpHandler {
   HttpHandler(const base::Closure& quit_func,
               const scoped_refptr<base::SingleThreadTaskRunner> io_task_runner,
               const std::string& url_base,
+              int adb_port,
               scoped_ptr<PortServer> port_server);
   ~HttpHandler();
 
@@ -105,6 +107,7 @@ class HttpHandler {
   SyncWebSocketFactory socket_factory_;
   SessionThreadMap session_thread_map_;
   scoped_ptr<CommandMap> command_map_;
+  scoped_ptr<Adb> adb_;
   scoped_ptr<DeviceManager> device_manager_;
   scoped_ptr<PortServer> port_server_;
   scoped_ptr<PortManager> port_manager_;
@@ -126,4 +129,4 @@ bool MatchesCommand(const std::string& method,
 
 }  // namespace internal
 
-#endif  // XWALK_TEST_XWALKDRIVER_SERVER_HTTP_HANDLER_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_SERVER_HTTP_HANDLER_H_

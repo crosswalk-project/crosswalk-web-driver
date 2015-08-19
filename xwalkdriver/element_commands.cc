@@ -4,26 +4,29 @@
 
 #include "xwalk/test/xwalkdriver/element_commands.h"
 
+#include <cmath>
 #include <list>
 #include <vector>
 
 #include "base/callback.h"
 #include "base/files/file_path.h"
-#include "base/strings/stringprintf.h"
 #include "base/strings/string_split.h"
+#include "base/strings/stringprintf.h"
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
 #include "base/values.h"
-#include "third_party/webdriver/atoms.h"
 #include "xwalk/test/xwalkdriver/basic_types.h"
-#include "xwalk/test/xwalkdriver/element_util.h"
-#include "xwalk/test/xwalkdriver/session.h"
-#include "xwalk/test/xwalkdriver/util.h"
+#include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
 #include "xwalk/test/xwalkdriver/xwalk/js.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view.h"
-#include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
+#include "xwalk/test/xwalkdriver/element_util.h"
+#include "xwalk/test/xwalkdriver/session.h"
+#include "xwalk/test/xwalkdriver/util.h"
+#include "third_party/webdriver/atoms.h"
+
+const int kFlickTouchEventsPerSecond = 30;
 
 namespace {
 
@@ -71,21 +74,6 @@ Status SendKeysToElement(
   }
 
   return SendKeysOnWindow(web_view, key_list, true, &session->sticky_modifiers);
-}
-
-Status ExecuteTouchSingleTapAtom(
-    Session* session,
-    WebView* web_view,
-    const std::string& element_id,
-    const base::DictionaryValue& params,
-    scoped_ptr<base::Value>* value) {
-  base::ListValue args;
-  args.Append(CreateElement(element_id));
-  return web_view->CallFunction(
-      session->GetCurrentFrameId(),
-      webdriver::atoms::asString(webdriver::atoms::TOUCH_SINGLE_TAP),
-      args,
-      value);
 }
 
 }  // namespace
@@ -198,23 +186,106 @@ Status ExecuteTouchSingleTap(
     const std::string& element_id,
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value) {
-  // Fall back to javascript atom for pre-m30 Xwalk.
-  if (session->xwalk->GetBuildNo() < 1576)
-    return ExecuteTouchSingleTapAtom(
-        session, web_view, element_id, params, value);
+  WebPoint location;
+  Status status = GetElementClickableLocation(
+      session, web_view, element_id, &location);
+  if (status.IsError())
+    return status;
+  if (!session->xwalk->HasTouchScreen()) {
+    // TODO(samuong): remove this once we stop supporting M44.
+    std::list<TouchEvent> events;
+    events.push_back(
+        TouchEvent(kTouchStart, location.x, location.y));
+    events.push_back(
+        TouchEvent(kTouchEnd, location.x, location.y));
+    return web_view->DispatchTouchEvents(events);
+  }
+  return web_view->SynthesizeTapGesture(location.x, location.y, 1, false);
+}
 
+Status ExecuteTouchDoubleTap(
+    Session* session,
+    WebView* web_view,
+    const std::string& element_id,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value) {
+  if (!session->xwalk->HasTouchScreen()) {
+    // TODO(samuong): remove this once we stop supporting M44.
+    return Status(kUnknownCommand, "Double tap command requires Xwalk 44+");
+  }
+  WebPoint location;
+  Status status = GetElementClickableLocation(
+      session, web_view, element_id, &location);
+  if (status.IsError())
+    return status;
+  return web_view->SynthesizeTapGesture(location.x, location.y, 2, false);
+}
+
+Status ExecuteTouchLongPress(
+    Session* session,
+    WebView* web_view,
+    const std::string& element_id,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value) {
+  if (!session->xwalk->HasTouchScreen()) {
+    // TODO(samuong): remove this once we stop supporting M44.
+    return Status(kUnknownCommand, "Long press command requires Xwalk 44+");
+  }
+  WebPoint location;
+  Status status = GetElementClickableLocation(
+      session, web_view, element_id, &location);
+  if (status.IsError())
+    return status;
+  return web_view->SynthesizeTapGesture(location.x, location.y, 1, true);
+}
+
+Status ExecuteFlick(
+    Session* session,
+    WebView* web_view,
+    const std::string& element_id,
+    const base::DictionaryValue& params,
+    scoped_ptr<base::Value>* value) {
   WebPoint location;
   Status status = GetElementClickableLocation(
       session, web_view, element_id, &location);
   if (status.IsError())
     return status;
 
-  std::list<TouchEvent> events;
-  events.push_back(
+  int xoffset, yoffset, speed;
+  if (!params.GetInteger("xoffset", &xoffset))
+    return Status(kUnknownError, "'xoffset' must be an integer");
+  if (!params.GetInteger("yoffset", &yoffset))
+    return Status(kUnknownError, "'yoffset' must be an integer");
+  if (!params.GetInteger("speed", &speed))
+    return Status(kUnknownError, "'speed' must be an integer");
+  if (speed < 1)
+    return Status(kUnknownError, "'speed' must be a positive integer");
+
+  status = web_view->DispatchTouchEvent(
       TouchEvent(kTouchStart, location.x, location.y));
-  events.push_back(
-      TouchEvent(kTouchEnd, location.x, location.y));
-  return web_view->DispatchTouchEvents(events);
+  if (status.IsError())
+    return status;
+
+  const double offset =
+      std::sqrt(static_cast<double>(xoffset * xoffset + yoffset * yoffset));
+  const double xoffset_per_event =
+      (speed * xoffset) / (kFlickTouchEventsPerSecond * offset);
+  const double yoffset_per_event =
+      (speed * yoffset) / (kFlickTouchEventsPerSecond * offset);
+  const int total_events =
+      (offset * kFlickTouchEventsPerSecond) / speed;
+  for (int i = 0; i < total_events; i++) {
+    status = web_view->DispatchTouchEvent(
+        TouchEvent(kTouchMove,
+                   location.x + xoffset_per_event * i,
+                   location.y + yoffset_per_event * i));
+    if (status.IsError())
+      return status;
+    base::PlatformThread::Sleep(
+        base::TimeDelta::FromMilliseconds(1000 / kFlickTouchEventsPerSecond));
+  }
+  return web_view->DispatchTouchEvent(
+      TouchEvent(kTouchEnd, location.x + xoffset, location.y + yoffset));
 }
 
 Status ExecuteClearElement(
@@ -411,9 +482,10 @@ Status ExecuteGetElementLocationOnceScrolledIntoView(
     const std::string& element_id,
     const base::DictionaryValue& params,
     scoped_ptr<base::Value>* value) {
+  WebPoint offset(0, 0);
   WebPoint location;
   Status status = ScrollElementIntoView(
-      session, web_view, element_id, &location);
+      session, web_view, element_id, &offset, &location);
   if (status.IsError())
     return status;
   value->reset(CreateValueFrom(location));

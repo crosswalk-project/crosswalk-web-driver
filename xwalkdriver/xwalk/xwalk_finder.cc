@@ -22,7 +22,27 @@
 
 namespace {
 
-#if defined(OS_LINUX)
+#if defined(OS_WIN)
+void GetApplicationDirs(std::vector<base::FilePath>* locations) {
+  std::vector<base::FilePath> installation_locations;
+  base::FilePath local_app_data, program_files, program_files_x86;
+  if (PathService::Get(base::DIR_LOCAL_APP_DATA, &local_app_data))
+    installation_locations.push_back(local_app_data);
+  if (PathService::Get(base::DIR_PROGRAM_FILES, &program_files))
+    installation_locations.push_back(program_files);
+  if (PathService::Get(base::DIR_PROGRAM_FILESX86, &program_files_x86))
+    installation_locations.push_back(program_files_x86);
+
+  for (size_t i = 0; i < installation_locations.size(); ++i) {
+    locations->push_back(
+        installation_locations[i].Append(L"Google\\Xwalk\\Application"));
+  }
+  for (size_t i = 0; i < installation_locations.size(); ++i) {
+    locations->push_back(
+        installation_locations[i].Append(L"Chromium\\Application"));
+  }
+}
+#elif defined(OS_LINUX)
 void GetApplicationDirs(std::vector<base::FilePath>* locations) {
   locations->push_back(base::FilePath("/opt/crosswalk"));
   locations->push_back(base::FilePath("/usr/local/bin"));
@@ -32,6 +52,10 @@ void GetApplicationDirs(std::vector<base::FilePath>* locations) {
   locations->push_back(base::FilePath("/bin"));
   locations->push_back(base::FilePath("/sbin"));
 }
+#elif defined(OS_ANDROID)
+void GetApplicationDirs(std::vector<base::FilePath>* locations) {
+  // On Android we won't be able to find Xwalk executable
+}
 #endif
 
 }  // namespace
@@ -39,7 +63,7 @@ void GetApplicationDirs(std::vector<base::FilePath>* locations) {
 namespace internal {
 
 bool FindExe(
-    const base::Callback<bool(const base::FilePath&)>& exists_func,  // NOLINT
+    const base::Callback<bool(const base::FilePath&)>& exists_func,
     const std::vector<base::FilePath>& rel_paths,
     const std::vector<base::FilePath>& locations,
     base::FilePath* out_path) {
@@ -57,12 +81,25 @@ bool FindExe(
 
 }  // namespace internal
 
-bool FindXwalk(base::FilePath* browser_exe) {
-#if defined(OS_LINUX)
-  base::FilePath browser_exes_array[] = {
-      base::FilePath("xwalk")
-  };
+#if defined(OS_MACOSX)
+void GetApplicationDirs(std::vector<base::FilePath>* locations);
 #endif
+
+bool FindXwalk(base::FilePath* browser_exe) {
+  base::FilePath browser_exes_array[] = {
+#if defined(OS_WIN)
+      base::FilePath(L"xwalk.exe")
+#elif defined(OS_MACOSX)
+      base::FilePath("Google Xwalk.app/Contents/MacOS/Google Xwalk"),
+      base::FilePath("Chromium.app/Contents/MacOS/Chromium")
+#elif defined(OS_LINUX)
+    base::FilePath("xwalk")
+#else
+      // it will compile but won't work on other OSes
+    base::FilePath()
+#endif
+  };
+
   std::vector<base::FilePath> browser_exes(
       browser_exes_array, browser_exes_array + arraysize(browser_exes_array));
   base::FilePath module_dir;

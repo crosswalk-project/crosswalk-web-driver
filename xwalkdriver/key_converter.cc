@@ -7,9 +7,9 @@
 #include "base/format_macros.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
-#include "xwalk/test/xwalkdriver/keycode_text_conversion.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
+#include "xwalk/test/xwalkdriver/keycode_text_conversion.h"
 
 namespace {
 
@@ -122,7 +122,8 @@ bool IsModifierKey(base::char16 key) {
 // Gets the key code associated with |key|, if it is a special WebDriver key.
 // Returns whether |key| is a special WebDriver key. If true, |key_code| will
 // be set.
-bool KeyCodeFromSpecialWebDriverKey(base::char16 key, ui::KeyboardCode* key_code) {
+bool KeyCodeFromSpecialWebDriverKey(base::char16 key,
+                                    ui::KeyboardCode* key_code) {
   int index = static_cast<int>(key) - 0xE000U;
   bool is_special_key = index >= 0 &&
       index < static_cast<int>(arraysize(kSpecialWebDriverKeys));

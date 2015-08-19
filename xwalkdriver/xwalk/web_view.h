@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_WEB_VIEW_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_WEB_VIEW_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_WEB_VIEW_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_WEB_VIEW_H_
 
 #include <list>
 #include <string>
@@ -24,6 +24,7 @@ struct Geoposition;
 class JavaScriptDialogManager;
 struct KeyEvent;
 struct MouseEvent;
+struct NetworkConditions;
 struct TouchEvent;
 class Status;
 
@@ -48,6 +49,11 @@ class WebView {
 
   // Reload the current page.
   virtual Status Reload() = 0;
+
+  // Navigate |delta| steps forward in the browser history. A negative value
+  // will navigate back in the history. If the delta exceeds the number of items
+  // in the browser history, stay on the current page.
+  virtual Status TraverseHistory(int delta) = 0;
 
   // Evaluates a JavaScript expression in a specified frame and returns
   // the result. |frame| is a frame ID or an empty string for the main frame.
@@ -102,6 +108,9 @@ class WebView {
   virtual Status DispatchMouseEvents(const std::list<MouseEvent>& events,
                                      const std::string& frame) = 0;
 
+  // Dispatch a single touch event.
+  virtual Status DispatchTouchEvent(const TouchEvent& event) = 0;
+
   // Dispatch a sequence of touch events.
   virtual Status DispatchTouchEvents(const std::list<TouchEvent>& events) = 0;
 
@@ -136,6 +145,10 @@ class WebView {
   // Overrides normal geolocation with a given geoposition.
   virtual Status OverrideGeolocation(const Geoposition& geoposition) = 0;
 
+  // Overrides normal network conditions with given conditions.
+  virtual Status OverrideNetworkConditions(
+      const NetworkConditions& network_conditions) = 0;
+
   // Captures the visible portions of the web view as a base64-encoded PNG.
   virtual Status CaptureScreenshot(std::string* screenshot) = 0;
 
@@ -151,6 +164,26 @@ class WebView {
   //  1. A meta data element "snapshot" about how to parse data elements.
   //  2. Data elements: "nodes", "edges", "strings".
   virtual Status TakeHeapSnapshot(scoped_ptr<base::Value>* snapshot) = 0;
+
+  // Start recording Javascript CPU Profile.
+  virtual Status StartProfile() = 0;
+
+  // Stop recording Javascript CPU Profile and returns a graph of
+  // CPUProfile objects. The format for the captured profile is defined
+  // (by DevTools) in protocol.json.
+  virtual Status EndProfile(scoped_ptr<base::Value>* profile_data) = 0;
+
+  virtual Status SynthesizeTapGesture(int x,
+                                      int y,
+                                      int tap_count,
+                                      bool is_long_press) = 0;
+
+  virtual Status SynthesizeScrollGesture(int x,
+                                         int y,
+                                         int xoffset,
+                                         int yoffset) = 0;
+
+  virtual Status SynthesizePinchGesture(int x, int y, double scale_factor) = 0;
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_WEB_VIEW_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_WEB_VIEW_H_

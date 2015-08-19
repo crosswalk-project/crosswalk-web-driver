@@ -4,8 +4,6 @@
 
 #include "xwalk/test/xwalkdriver/xwalk/log.h"
 
-#include <algorithm>
-
 #include "base/json/json_reader.h"
 #include "base/json/json_writer.h"
 #include "base/strings/string_util.h"

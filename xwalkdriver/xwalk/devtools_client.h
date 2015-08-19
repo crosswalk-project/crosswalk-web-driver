@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_DEVTOOLS_CLIENT_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_DEVTOOLS_CLIENT_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_DEVTOOLS_CLIENT_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_DEVTOOLS_CLIENT_H_
 
 #include <string>
 
@@ -32,8 +32,14 @@ class DevToolsClient {
   // Connect to DevTools if the DevToolsClient is disconnected.
   virtual Status ConnectIfNecessary() = 0;
 
-  virtual Status SendCommand(const std::string& method,
-                             const base::DictionaryValue& params) = 0;
+  virtual Status SendCommand(
+      const std::string& method,
+      const base::DictionaryValue& params) = 0;
+
+  virtual Status SendAsyncCommand(
+      const std::string& method,
+      const base::DictionaryValue& params) = 0;
+
   virtual Status SendCommandAndGetResult(
       const std::string& method,
       const base::DictionaryValue& params,
@@ -54,4 +60,4 @@ class DevToolsClient {
   virtual Status HandleReceivedEvents() = 0;
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_DEVTOOLS_CLIENT_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_DEVTOOLS_CLIENT_H_

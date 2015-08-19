@@ -4,8 +4,6 @@
 
 #include "xwalk/test/xwalkdriver/xwalk/web_view_impl.h"
 
-#include <vector>
-
 #include "base/bind.h"
 #include "base/files/file_path.h"
 #include "base/json/json_writer.h"
@@ -15,6 +13,7 @@
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
 #include "base/values.h"
+#include "xwalk/test/xwalkdriver/xwalk/browser_info.h"
 #include "xwalk/test/xwalkdriver/xwalk/debugger_tracker.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_client_impl.h"
 #include "xwalk/test/xwalkdriver/xwalk/dom_tracker.h"
@@ -23,7 +22,9 @@
 #include "xwalk/test/xwalkdriver/xwalk/heap_snapshot_taker.h"
 #include "xwalk/test/xwalkdriver/xwalk/javascript_dialog_manager.h"
 #include "xwalk/test/xwalkdriver/xwalk/js.h"
+#include "xwalk/test/xwalkdriver/xwalk/mobile_emulation_override_manager.h"
 #include "xwalk/test/xwalkdriver/xwalk/navigation_tracker.h"
+#include "xwalk/test/xwalkdriver/xwalk/network_conditions_override_manager.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
 
@@ -114,16 +115,21 @@ const char* GetAsString(KeyEventType type) {
 }  // namespace
 
 WebViewImpl::WebViewImpl(const std::string& id,
-                         int build_no,
-                         scoped_ptr<DevToolsClient> client)
+                         const BrowserInfo* browser_info,
+                         scoped_ptr<DevToolsClient> client,
+                         const DeviceMetrics* device_metrics)
     : id_(id),
-      build_no_(build_no),
+      browser_info_(browser_info),
       dom_tracker_(new DomTracker(client.get())),
       frame_tracker_(new FrameTracker(client.get())),
-      navigation_tracker_(new NavigationTracker(client.get())),
+      navigation_tracker_(new NavigationTracker(client.get(), browser_info)),
       dialog_manager_(new JavaScriptDialogManager(client.get())),
+      mobile_emulation_override_manager_(
+          new MobileEmulationOverrideManager(client.get(), device_metrics)),
       geolocation_override_manager_(
           new GeolocationOverrideManager(client.get())),
+      network_conditions_override_manager_(
+          new NetworkConditionsOverrideManager(client.get())),
       heap_snapshot_taker_(new HeapSnapshotTaker(client.get())),
       debugger_(new DebuggerTracker(client.get())),
       client_(client.release()) {}
@@ -149,7 +155,8 @@ Status WebViewImpl::HandleReceivedEvents() {
 Status WebViewImpl::Load(const std::string& url) {
   // Javascript URLs will cause a hang while waiting for the page to stop
   // loading, so just disallow.
-  if (StartsWithASCII(url, "javascript:", false))
+  if (StartsWithASCII(url, "javascript:", true))
+//                       base::CompareCase::INSENSITIVE_ASCII))
     return Status(kUnknownError, "unsupported protocol");
   base::DictionaryValue params;
   params.SetString("url", url);
@@ -160,6 +167,58 @@ Status WebViewImpl::Reload() {
   base::DictionaryValue params;
   params.SetBoolean("ignoreCache", false);
   return client_->SendCommand("Page.reload", params);
+}
+
+Status WebViewImpl::TraverseHistory(int delta) {
+  base::DictionaryValue params;
+  scoped_ptr<base::DictionaryValue> result;
+  Status status = client_->SendCommandAndGetResult(
+      "Page.getNavigationHistory", params, &result);
+  if (status.IsError()) {
+    // TODO(samuong): remove this once we stop supporting WebView on KitKat.
+    // Older versions of WebView on Android (on KitKat and earlier) do not have
+    // the Page.getNavigationHistory DevTools command handler, so fall back to
+    // using JavaScript to navigate back and forward. WebView reports its build
+    // number as 0, so use the error status to detect if we can't use the
+    // DevTools command.
+    if (browser_info_->browser_name == "webview")
+      return TraverseHistoryWithJavaScript(delta);
+    else
+      return status;
+  }
+
+  int current_index;
+  if (!result->GetInteger("currentIndex", &current_index))
+    return Status(kUnknownError, "DevTools didn't return currentIndex");
+
+  base::ListValue* entries;
+  if (!result->GetList("entries", &entries))
+    return Status(kUnknownError, "DevTools didn't return entries");
+
+  base::DictionaryValue* entry;
+  if (!entries->GetDictionary(current_index + delta, &entry)) {
+    // The WebDriver spec says that if there are no pages left in the browser's
+    // history (i.e. |current_index + delta| is out of range), then we must not
+    // navigate anywhere.
+    return Status(kOk);
+  }
+
+  int entry_id;
+  if (!entry->GetInteger("id", &entry_id))
+    return Status(kUnknownError, "history entry does not have an id");
+  params.SetInteger("entryId", entry_id);
+
+  return client_->SendCommand("Page.navigateToHistoryEntry", params);
+}
+
+Status WebViewImpl::TraverseHistoryWithJavaScript(int delta) {
+  scoped_ptr<base::Value> value;
+  if (delta == -1)
+    return EvaluateScript(std::string(), "window.history.back();", &value);
+  else if (delta == 1)
+    return EvaluateScript(std::string(), "window.history.forward();", &value);
+  else
+    return Status(kUnknownError, "expected delta to be 1 or -1");
 }
 
 Status WebViewImpl::EvaluateScript(const std::string& frame,
@@ -234,47 +293,57 @@ Status WebViewImpl::GetFrameByFunction(const std::string& frame,
 
 Status WebViewImpl::DispatchMouseEvents(const std::list<MouseEvent>& events,
                                         const std::string& frame) {
+  double page_scale_factor = 1.0;
+  if (browser_info_->build_no >= 2358 && browser_info_->build_no <= 2430 &&
+      (browser_info_->is_android ||
+       mobile_emulation_override_manager_->IsEmulatingTouch())) {
+    // As of crrev.com/323900, on Android and under mobile emulation,
+    // Input.dispatchMouseEvent fails to apply the page scale factor to the
+    // mouse event coordinates. This leads to the MouseEvent being triggered on
+    // the wrong location on the page. This was fixed on the browser side in
+    // crrev.com/333979.
+    // TODO(samuong): remove once we stop supporting M45.
+    scoped_ptr<base::Value> value;
+    Status status = EvaluateScript(
+        std::string(), "window.screen.width / window.innerWidth;", &value);
+    if (status.IsError())
+      return status;
+    if (!value->GetAsDouble(&page_scale_factor))
+      return Status(kUnknownError, "unable to determine page scale factor");
+  }
   for (std::list<MouseEvent>::const_iterator it = events.begin();
        it != events.end(); ++it) {
     base::DictionaryValue params;
     params.SetString("type", GetAsString(it->type));
-    params.SetInteger("x", it->x);
-    params.SetInteger("y", it->y);
+    params.SetInteger("x", it->x * page_scale_factor);
+    params.SetInteger("y", it->y * page_scale_factor);
     params.SetInteger("modifiers", it->modifiers);
     params.SetString("button", GetAsString(it->button));
     params.SetInteger("clickCount", it->click_count);
     Status status = client_->SendCommand("Input.dispatchMouseEvent", params);
     if (status.IsError())
       return status;
-    if (build_no_ < 1569 && it->button == kRightMouseButton &&
-        it->type == kReleasedMouseEventType) {
-      base::ListValue args;
-      args.AppendInteger(it->x);
-      args.AppendInteger(it->y);
-      args.AppendInteger(it->modifiers);
-      scoped_ptr<base::Value> result;
-      status = CallFunction(
-          frame, kDispatchContextMenuEventScript, args, &result);
-      if (status.IsError())
-        return status;
-    }
   }
   return Status(kOk);
+}
+
+Status WebViewImpl::DispatchTouchEvent(const TouchEvent& event) {
+  base::DictionaryValue params;
+  params.SetString("type", GetAsString(event.type));
+  scoped_ptr<base::ListValue> point_list(new base::ListValue);
+  scoped_ptr<base::DictionaryValue> point(new base::DictionaryValue);
+  point->SetString("state", GetPointStateString(event.type));
+  point->SetInteger("x", event.x);
+  point->SetInteger("y", event.y);
+  point_list->Set(0, point.release());
+  params.Set("touchPoints", point_list.release());
+  return client_->SendCommand("Input.dispatchTouchEvent", params);
 }
 
 Status WebViewImpl::DispatchTouchEvents(const std::list<TouchEvent>& events) {
   for (std::list<TouchEvent>::const_iterator it = events.begin();
        it != events.end(); ++it) {
-    base::DictionaryValue params;
-    params.SetString("type", GetAsString(it->type));
-    scoped_ptr<base::ListValue> point_list(new base::ListValue);
-    scoped_ptr<base::DictionaryValue> point(new base::DictionaryValue);
-    point->SetString("state", GetPointStateString(it->type));
-    point->SetInteger("x", it->x);
-    point->SetInteger("y", it->y);
-    point_list->Set(0, point.release());
-    params.Set("touchPoints", point_list.release());
-    Status status = client_->SendCommand("Input.dispatchTouchEvent", params);
+    Status status = DispatchTouchEvent(*it);
     if (status.IsError())
       return status;
   }
@@ -363,6 +432,12 @@ Status WebViewImpl::OverrideGeolocation(const Geoposition& geoposition) {
   return geolocation_override_manager_->OverrideGeolocation(geoposition);
 }
 
+Status WebViewImpl::OverrideNetworkConditions(
+    const NetworkConditions& network_conditions) {
+  return network_conditions_override_manager_->OverrideNetworkConditions(
+      network_conditions);
+}
+
 Status WebViewImpl::CaptureScreenshot(std::string* screenshot) {
   base::DictionaryValue params;
   scoped_ptr<base::DictionaryValue> result;
@@ -418,6 +493,108 @@ Status WebViewImpl::TakeHeapSnapshot(scoped_ptr<base::Value>* snapshot) {
   return heap_snapshot_taker_->TakeSnapshot(snapshot);
 }
 
+Status WebViewImpl::InitProfileInternal() {
+  base::DictionaryValue params;
+
+  // TODO: Remove Debugger.enable after Xwalk 36 stable is released.
+  Status status_debug = client_->SendCommand("Debugger.enable", params);
+
+  if (status_debug.IsError())
+    return status_debug;
+
+  Status status_profiler = client_->SendCommand("Profiler.enable", params);
+
+  if (status_profiler.IsError()) {
+    Status status_debugger = client_->SendCommand("Debugger.disable", params);
+    if (status_debugger.IsError())
+      return status_debugger;
+
+    return status_profiler;
+  }
+
+  return Status(kOk);
+}
+
+Status WebViewImpl::StopProfileInternal() {
+  base::DictionaryValue params;
+  Status status_debug = client_->SendCommand("Debugger.disable", params);
+  Status status_profiler = client_->SendCommand("Profiler.disable", params);
+
+  if (status_debug.IsError()) {
+    return status_debug;
+  } else if (status_profiler.IsError()) {
+    return status_profiler;
+  }
+
+  return Status(kOk);
+}
+
+Status WebViewImpl::StartProfile() {
+  Status status_init = InitProfileInternal();
+
+  if (status_init.IsError())
+    return status_init;
+
+  base::DictionaryValue params;
+  return client_->SendCommand("Profiler.start", params);
+}
+
+Status WebViewImpl::EndProfile(scoped_ptr<base::Value>* profile_data) {
+  base::DictionaryValue params;
+  scoped_ptr<base::DictionaryValue> profile_result;
+
+  Status status = client_->SendCommandAndGetResult(
+      "Profiler.stop", params, &profile_result);
+
+  if (status.IsError()) {
+    Status disable_profile_status = StopProfileInternal();
+    if (disable_profile_status.IsError()) {
+      return disable_profile_status;
+    } else {
+      return status;
+    }
+  }
+
+  *profile_data = profile_result.Pass();
+  return status;
+}
+
+Status WebViewImpl::SynthesizeTapGesture(int x,
+                                         int y,
+                                         int tap_count,
+                                         bool is_long_press) {
+  base::DictionaryValue params;
+  params.SetInteger("x", x);
+  params.SetInteger("y", y);
+  params.SetInteger("tapCount", tap_count);
+  if (is_long_press)
+    params.SetInteger("duration", 1500);
+  return client_->SendCommand("Input.synthesizeTapGesture", params);
+}
+
+Status WebViewImpl::SynthesizeScrollGesture(int x,
+                                            int y,
+                                            int xoffset,
+                                            int yoffset) {
+  base::DictionaryValue params;
+  params.SetInteger("x", x);
+  params.SetInteger("y", y);
+  // Xwalk's synthetic scroll gesture is actually a "swipe" gesture, so the
+  // direction of the swipe is opposite to the scroll (i.e. a swipe up scrolls
+  // down, and a swipe left scrolls right).
+  params.SetInteger("xDistance", -xoffset);
+  params.SetInteger("yDistance", -yoffset);
+  return client_->SendCommand("Input.synthesizeScrollGesture", params);
+}
+
+Status WebViewImpl::SynthesizePinchGesture(int x, int y, double scale_factor) {
+  base::DictionaryValue params;
+  params.SetInteger("x", x);
+  params.SetInteger("y", y);
+  params.SetDouble("scaleFactor", scale_factor);
+  return client_->SendCommand("Input.synthesizePinchGesture", params);
+}
+
 Status WebViewImpl::CallAsyncFunctionInternal(const std::string& frame,
                                               const std::string& function,
                                               const base::ListValue& args,
@@ -435,7 +612,7 @@ Status WebViewImpl::CallAsyncFunctionInternal(const std::string& frame,
   if (status.IsError())
     return status;
 
-  const char* kDocUnloadError = "document unloaded while waiting for result";
+  const char kDocUnloadError[] = "document unloaded while waiting for result";
   std::string kQueryResult = base::StringPrintf(
       "function() {"
       "  var info = document.$xwalk_asyncScriptInfo;"
@@ -567,7 +744,7 @@ Status EvaluateScriptAndGetValue(DevToolsClient* client,
     return Status(kUnknownError, "Runtime.evaluate missing string 'type'");
 
   if (type == "undefined") {
-    result->reset(base::Value::CreateNullValue());
+    *result = base::Value::CreateNullValue();
   } else {
     base::Value* value;
     if (!temp_result->Get("value", &value))

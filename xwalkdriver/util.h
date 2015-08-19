@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_UTIL_H_
-#define XWALK_TEST_XWALKDRIVER_UTIL_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_UTIL_H_
+#define CHROME_TEST_CHROMEDRIVER_UTIL_H_
 
 #include <string>
 
@@ -12,6 +12,7 @@ class FilePath;
 class ListValue;
 }
 
+struct Session;
 class Status;
 class WebView;
 
@@ -39,4 +40,9 @@ Status UnzipSoleFile(const base::FilePath& unzip_dir,
                      const std::string& bytes,
                      base::FilePath* file);
 
-#endif  // XWALK_TEST_XWALKDRIVER_UTIL_H_
+// Calls BeforeCommand for each of |session|'s |CommandListener|s.
+// If an error is encountered, will mark |session| for deletion and return.
+Status NotifyCommandListenersBeforeCommand(Session* session,
+                                           const std::string& command_name);
+
+#endif  // CHROME_TEST_CHROMEDRIVER_UTIL_H_

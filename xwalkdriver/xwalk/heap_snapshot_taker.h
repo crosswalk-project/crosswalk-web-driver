@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_HEAP_SNAPSHOT_TAKER_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_HEAP_SNAPSHOT_TAKER_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_HEAP_SNAPSHOT_TAKER_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_HEAP_SNAPSHOT_TAKER_H_
 
 #include <string>
 
@@ -21,26 +21,25 @@ class DevToolsClient;
 class Status;
 
 // Take the heap snapshot.
-class HeapSnapshotTaker: public DevToolsEventListener {
+class HeapSnapshotTaker : public DevToolsEventListener {
  public:
   explicit HeapSnapshotTaker(DevToolsClient* client);
-  virtual ~HeapSnapshotTaker();
+  ~HeapSnapshotTaker() override;
 
   Status TakeSnapshot(scoped_ptr<base::Value>* snapshot);
 
   // Overridden from DevToolsEventListener:
-  virtual Status OnEvent(DevToolsClient* client,
-                         const std::string& method,
-                         const base::DictionaryValue& params) override;
+  Status OnEvent(DevToolsClient* client,
+                 const std::string& method,
+                 const base::DictionaryValue& params) override;
 
  private:
   Status TakeSnapshotInternal();
 
   DevToolsClient* client_;
-  int snapshot_uid_;
   std::string snapshot_;
 
   DISALLOW_COPY_AND_ASSIGN(HeapSnapshotTaker);
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_HEAP_SNAPSHOT_TAKER_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_HEAP_SNAPSHOT_TAKER_H_

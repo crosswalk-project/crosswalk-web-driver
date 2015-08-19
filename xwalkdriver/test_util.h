@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_TEST_UTIL_H_
-#define XWALK_TEST_XWALKDRIVER_TEST_UTIL_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_TEST_UTIL_H_
+#define CHROME_TEST_CHROMEDRIVER_TEST_UTIL_H_
 
 #include <string>
 
 #include "base/basictypes.h"
 
 #if defined(OS_WIN)
-#include <windows.h>  // NOLINT
+#include <windows.h>
 #elif defined(OS_MACOSX)
-#include <Carbon/Carbon.h>  // NOLINT
-#include "base/mac/scoped_cftyperef.h"  // NOLINT
+#include <Carbon/Carbon.h>
+#include "base/mac/scoped_cftyperef.h"
 #endif
 
 // Restores the keyboard layout that was active at this object's creation
@@ -48,4 +48,4 @@ bool SwitchKeyboardLayout(const std::string& input_locale_identifier);
 bool SwitchKeyboardLayout(const std::string& input_source_id);
 #endif  // defined(OS_MACOSX)
 
-#endif  // XWALK_TEST_XWALKDRIVER_TEST_UTIL_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_TEST_UTIL_H_

@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "xwalk/test/xwalkdriver/keycode_text_conversion.h"
+
 #include <algorithm>
-#include <X11/keysym.h>  //NOLINT
-#include <X11/XKBlib.h>  //NOLINT
-#include <X11/Xlib.h>  //NOLINT
-#include <X11/Xutil.h>  //NOLINT
+#include <X11/keysym.h>
+#include <X11/XKBlib.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 
 #include "base/strings/utf_string_conversions.h"
+#include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
 #include "ui/base/x/x11_util.h"
 #include "ui/events/keycodes/keyboard_code_conversion_x.h"
-#include "xwalk/test/xwalkdriver/keycode_text_conversion.h"
-#include "xwalk/test/xwalkdriver/xwalk/ui_events.h"
 
 namespace {
 
@@ -223,7 +224,7 @@ bool ConvertKeyCodeToText(
   if (!character)
     *text = std::string();
   else
-    *text = UTF16ToUTF8(base::string16(1, character));
+    *text = base::UTF16ToUTF8(base::string16(1, character));
   return true;
 }
 
@@ -232,7 +233,7 @@ bool ConvertCharToKeyCode(
     ui::KeyboardCode* key_code,
     int* necessary_modifiers,
     std::string* error_msg) {
-  std::string key_string(UTF16ToUTF8(base::string16(1, key)));
+  std::string key_string(base::UTF16ToUTF8(base::string16(1, key)));
   bool found = false;
   ui::KeyboardCode test_code;
   int test_modifiers;

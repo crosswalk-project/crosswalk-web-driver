@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_SESSION_THREAD_MAP_H_
-#define XWALK_TEST_XWALKDRIVER_SESSION_THREAD_MAP_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_SESSION_THREAD_MAP_H_
+#define CHROME_TEST_CHROMEDRIVER_SESSION_THREAD_MAP_H_
 
 #include <map>
 #include <string>
@@ -13,4 +13,4 @@
 
 typedef std::map<std::string, linked_ptr<base::Thread> > SessionThreadMap;
 
-#endif  // XWALK_TEST_XWALKDRIVER_SESSION_THREAD_MAP_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_SESSION_THREAD_MAP_H_

@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_NET_TEST_HTTP_SERVER_H_
-#define XWALK_TEST_XWALKDRIVER_NET_TEST_HTTP_SERVER_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_NET_TEST_HTTP_SERVER_H_
+#define CHROME_TEST_CHROMEDRIVER_NET_TEST_HTTP_SERVER_H_
 
 #include <set>
-#include <string>
 
 #include "base/basictypes.h"
 #include "base/compiler_specific.h"
@@ -40,7 +39,7 @@ class TestHttpServer : public net::HttpServer::Delegate {
   // Creates an http server. By default it accepts WebSockets and echoes
   // WebSocket messages back.
   TestHttpServer();
-  virtual ~TestHttpServer();
+  ~TestHttpServer() override;
 
   // Starts the server. Returns whether it was started successfully.
   bool Start();
@@ -62,14 +61,13 @@ class TestHttpServer : public net::HttpServer::Delegate {
   GURL web_socket_url() const;
 
   // Overridden from net::HttpServer::Delegate:
-  virtual void OnHttpRequest(int connection_id,
-                             const net::HttpServerRequestInfo& info) override {}
-  virtual void OnWebSocketRequest(
-      int connection_id,
-      const net::HttpServerRequestInfo& info) override;
-  virtual void OnWebSocketMessage(int connection_id,
-                                  const std::string& data) override;
-  virtual void OnClose(int connection_id) override;
+  void OnConnect(int connection_id) override;
+  void OnHttpRequest(int connection_id,
+                     const net::HttpServerRequestInfo& info) override {}
+  void OnWebSocketRequest(int connection_id,
+                          const net::HttpServerRequestInfo& info) override;
+  void OnWebSocketMessage(int connection_id, const std::string& data) override;
+  void OnClose(int connection_id) override;
 
  private:
   void StartOnServerThread(bool* success, base::WaitableEvent* event);
@@ -78,7 +76,7 @@ class TestHttpServer : public net::HttpServer::Delegate {
   base::Thread thread_;
 
   // Access only on the server thread.
-  scoped_refptr<net::HttpServer> server_;
+  scoped_ptr<net::HttpServer> server_;
 
   // Access only on the server thread.
   std::set<int> connections_;
@@ -97,4 +95,4 @@ class TestHttpServer : public net::HttpServer::Delegate {
   DISALLOW_COPY_AND_ASSIGN(TestHttpServer);
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_NET_TEST_HTTP_SERVER_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_NET_TEST_HTTP_SERVER_H_

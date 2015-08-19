@@ -2,18 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_XWALK_IMPL_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_XWALK_IMPL_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_CHROME_IMPL_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_CHROME_IMPL_H_
 
 #include <list>
 #include <string>
 
+#include "base/callback.h"
 #include "base/compiler_specific.h"
 #include "base/memory/linked_ptr.h"
 #include "base/memory/scoped_ptr.h"
 #include "base/memory/scoped_vector.h"
 #include "xwalk/test/xwalkdriver/xwalk/xwalk.h"
 
+class AutomationExtension;
+struct BrowserInfo;
+class DevToolsClient;
 class DevToolsEventListener;
 class DevToolsHttpClient;
 class JavaScriptDialogManager;
@@ -21,33 +25,41 @@ class PortReservation;
 class Status;
 class WebView;
 class WebViewImpl;
+struct WebViewInfo;
+
+typedef base::Callback<void(const WebViewInfo&)> WebViewCallback;
 
 class XwalkImpl : public Xwalk {
  public:
-  virtual ~XwalkImpl();
+  ~XwalkImpl() override;
 
   // Overridden from Xwalk:
-  virtual std::string GetVersion() override;
-  virtual XwalkDesktopImpl* GetAsDesktop() override;
-  virtual int GetBuildNo() override;
-  virtual bool HasCrashedWebView() override;
-  virtual Status GetWebViewIds(std::list<std::string>* web_view_ids) override;
-  virtual Status GetWebViewById(const std::string& id,
-                                WebView** web_view) override;
-  virtual Status CloseWebView(const std::string& id) override;
-  virtual Status ActivateWebView(const std::string& id) override;
-  virtual Status Quit() override;
+  Status GetAsDesktop(XwalkDesktopImpl** desktop) override;
+  const BrowserInfo* GetBrowserInfo() const override;
+  bool HasCrashedWebView() override;
+  Status GetWebViewIds(std::list<std::string>* web_view_ids) override;
+  Status GetWebViewById(const std::string& id, WebView** web_view) override;
+  Status CloseWebView(const std::string& id) override;
+  Status ActivateWebView(const std::string& id) override;
+  bool IsMobileEmulationEnabled() const override;
+  bool HasTouchScreen() const override;
+  Status Quit() override;
 
  protected:
   XwalkImpl(
-      scoped_ptr<DevToolsHttpClient> client,
+      scoped_ptr<DevToolsHttpClient> http_client,
+      scoped_ptr<DevToolsClient> websocket_client,
       ScopedVector<DevToolsEventListener>& devtools_event_listeners,
       scoped_ptr<PortReservation> port_reservation);
+
+  Status UpdateWebViewIds(std::list<std::string>* web_view_ids,
+                          const WebViewCallback& callback);
 
   virtual Status QuitImpl() = 0;
 
   bool quit_;
   scoped_ptr<DevToolsHttpClient> devtools_http_client_;
+  scoped_ptr<DevToolsClient> devtools_websocket_client_;
 
  private:
   typedef std::list<linked_ptr<WebViewImpl> > WebViewList;
@@ -58,4 +70,4 @@ class XwalkImpl : public Xwalk {
   scoped_ptr<PortReservation> port_reservation_;
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_XWALK_IMPL_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_CHROME_IMPL_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_DEBUGGER_TRACKER_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_DEBUGGER_TRACKER_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_DEBUGGER_TRACKER_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_DEBUGGER_TRACKER_H_
 
 #include <string>
 
@@ -22,15 +22,15 @@ class Status;
 class DebuggerTracker : public DevToolsEventListener {
  public:
   explicit DebuggerTracker(DevToolsClient* client);
-  virtual ~DebuggerTracker();
+  ~DebuggerTracker() override;
 
   // Overridden from DevToolsEventListener:
-  virtual Status OnEvent(DevToolsClient* client,
-                         const std::string& method,
-                         const base::DictionaryValue& params) override;
+  Status OnEvent(DevToolsClient* client,
+                 const std::string& method,
+                 const base::DictionaryValue& params) override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(DebuggerTracker);
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_DEBUGGER_TRACKER_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_DEBUGGER_TRACKER_H_

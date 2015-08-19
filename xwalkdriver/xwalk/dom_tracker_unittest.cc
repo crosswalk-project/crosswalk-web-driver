@@ -7,17 +7,17 @@
 
 #include "base/json/json_reader.h"
 #include "base/values.h"
-#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/xwalk/dom_tracker.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/stub_devtools_client.h"
+#include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
 
 class FakeDevToolsClient : public StubDevToolsClient {
  public:
   FakeDevToolsClient() {}
-  virtual ~FakeDevToolsClient() {}
+  ~FakeDevToolsClient() override {}
 
   std::string PopSentCommand() {
     std::string command;
@@ -29,12 +29,12 @@ class FakeDevToolsClient : public StubDevToolsClient {
   }
 
   // Overridden from DevToolsClient:
-  virtual Status SendCommand(const std::string& method,
-                             const base::DictionaryValue& params) override {
+  Status SendCommand(const std::string& method,
+                     const base::DictionaryValue& params) override {
     sent_command_queue_.push_back(method);
     return Status(kOk);
   }
-  virtual Status SendCommandAndGetResult(
+  Status SendCommandAndGetResult(
       const std::string& method,
       const base::DictionaryValue& params,
       scoped_ptr<base::DictionaryValue>* result) override {
@@ -87,7 +87,7 @@ TEST(DomTracker, ChildNodeInserted) {
 
   params.Clear();
   params.Set("node", base::JSONReader::Read(
-      "{\"nodeId\":2,\"frameId\":\"f\"}"));
+                         "{\"nodeId\":2,\"frameId\":\"f\"}"));
   ASSERT_EQ(kOk,
             tracker.OnEvent(&client, "DOM.childNodeInserted", params).code());
   ASSERT_TRUE(tracker.GetFrameIdForNode(2, &frame_id).IsOk());

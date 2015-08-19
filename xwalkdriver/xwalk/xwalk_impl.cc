@@ -4,28 +4,32 @@
 
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_impl.h"
 
-#include "xwalk/test/xwalkdriver/net/port_server.h"
+#include "base/bind.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_event_listener.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_http_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/web_view_impl.h"
+#include "xwalk/test/xwalkdriver/net/port_server.h"
+
+namespace {
+
+void DoNothingWithWebViewInfo(const WebViewInfo& view) {
+}
+
+}  // namespace
 
 XwalkImpl::~XwalkImpl() {
   if (!quit_)
     port_reservation_->Leak();
 }
 
-XwalkDesktopImpl* XwalkImpl::GetAsDesktop() {
-  return NULL;
+Status XwalkImpl::GetAsDesktop(XwalkDesktopImpl** desktop) {
+  return Status(kUnknownError, "operation unsupported");
 }
 
-std::string XwalkImpl::GetVersion() {
-  return devtools_http_client_->version();
-}
-
-int XwalkImpl::GetBuildNo() {
-  return devtools_http_client_->build_no();
+const BrowserInfo* XwalkImpl::GetBrowserInfo() const {
+  return devtools_http_client_->browser_info();
 }
 
 bool XwalkImpl::HasCrashedWebView() {
@@ -38,6 +42,12 @@ bool XwalkImpl::HasCrashedWebView() {
 }
 
 Status XwalkImpl::GetWebViewIds(std::list<std::string>* web_view_ids) {
+  WebViewCallback callback = base::Bind(&DoNothingWithWebViewInfo);
+  return UpdateWebViewIds(web_view_ids, callback);
+}
+
+Status XwalkImpl::UpdateWebViewIds(std::list<std::string>* web_view_ids,
+                                    const WebViewCallback& on_open_web_view) {
   WebViewsInfo views_info;
   Status status = devtools_http_client_->GetWebViewsInfo(&views_info);
   if (status.IsError())
@@ -56,28 +66,35 @@ Status XwalkImpl::GetWebViewIds(std::list<std::string>* web_view_ids) {
   // Check for newly-opened web views.
   for (size_t i = 0; i < views_info.GetSize(); ++i) {
     const WebViewInfo& view = views_info.Get(i);
-    if (view.type != WebViewInfo::kPage)
-      continue;
-
-    bool found = false;
-    for (WebViewList::const_iterator web_view_iter = web_views_.begin();
-         web_view_iter != web_views_.end(); ++web_view_iter) {
-      if ((*web_view_iter)->GetId() == view.id) {
-        found = true;
-        break;
+    if (view.type == WebViewInfo::kPage ||
+        view.type == WebViewInfo::kApp ||
+        (view.type == WebViewInfo::kOther &&
+         (view.url.find("xwalk-extension://") == 0 ||
+          view.url == "xwalk://print/"))) {
+      bool found = false;
+      for (WebViewList::const_iterator web_view_iter = web_views_.begin();
+           web_view_iter != web_views_.end(); ++web_view_iter) {
+        if ((*web_view_iter)->GetId() == view.id) {
+          found = true;
+          break;
+        }
       }
-    }
-    if (!found) {
-      scoped_ptr<DevToolsClient> client(
-          devtools_http_client_->CreateClient(view.id));
-      for (ScopedVector<DevToolsEventListener>::const_iterator listener =
-               devtools_event_listeners_.begin();
-           listener != devtools_event_listeners_.end(); ++listener) {
-        client->AddListener(*listener);
-        // OnConnected will fire when DevToolsClient connects later.
+      if (!found) {
+        scoped_ptr<DevToolsClient> client(
+            devtools_http_client_->CreateClient(view.id));
+        for (ScopedVector<DevToolsEventListener>::const_iterator listener =
+                 devtools_event_listeners_.begin();
+             listener != devtools_event_listeners_.end(); ++listener) {
+          client->AddListener(*listener);
+          // OnConnected will fire when DevToolsClient connects later.
+        }
+        web_views_.push_back(make_linked_ptr(new WebViewImpl(
+            view.id,
+            devtools_http_client_->browser_info(),
+            client.Pass(),
+            devtools_http_client_->device_metrics())));
+        on_open_web_view.Run(view);
       }
-      web_views_.push_back(make_linked_ptr(new WebViewImpl(
-          view.id, GetBuildNo(), client.Pass())));
     }
   }
 
@@ -119,6 +136,14 @@ Status XwalkImpl::ActivateWebView(const std::string& id) {
   return devtools_http_client_->ActivateWebView(id);
 }
 
+bool XwalkImpl::IsMobileEmulationEnabled() const {
+  return false;
+}
+
+bool XwalkImpl::HasTouchScreen() const {
+  return false;
+}
+
 Status XwalkImpl::Quit() {
   Status status = QuitImpl();
   if (status.IsOk())
@@ -127,11 +152,13 @@ Status XwalkImpl::Quit() {
 }
 
 XwalkImpl::XwalkImpl(
-    scoped_ptr<DevToolsHttpClient> client,
+    scoped_ptr<DevToolsHttpClient> http_client,
+    scoped_ptr<DevToolsClient> websocket_client,
     ScopedVector<DevToolsEventListener>& devtools_event_listeners,
     scoped_ptr<PortReservation> port_reservation)
     : quit_(false),
-      devtools_http_client_(client.Pass()),
+      devtools_http_client_(http_client.Pass()),
+      devtools_websocket_client_(websocket_client.Pass()),
       port_reservation_(port_reservation.Pass()) {
   devtools_event_listeners_.swap(devtools_event_listeners);
 }

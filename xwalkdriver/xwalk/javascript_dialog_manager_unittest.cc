@@ -7,10 +7,10 @@
 #include "base/callback.h"
 #include "base/memory/scoped_ptr.h"
 #include "base/values.h"
-#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/xwalk/javascript_dialog_manager.h"
+#include "xwalk/test/xwalkdriver/xwalk/recorder_devtools_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
-#include "xwalk/test/xwalkdriver/xwalk/stub_devtools_client.h"
+#include "testing/gtest/include/gtest/gtest.h"
 
 TEST(JavaScriptDialogManager, NoDialog) {
   StubDevToolsClient client;
@@ -21,30 +21,6 @@ TEST(JavaScriptDialogManager, NoDialog) {
   ASSERT_STREQ("HI", message.c_str());
   ASSERT_EQ(kNoAlertOpen, manager.HandleDialog(false, NULL).code());
 }
-
-namespace {
-
-class RecorderDevToolsClient : public StubDevToolsClient {
- public:
-  RecorderDevToolsClient() {}
-  virtual ~RecorderDevToolsClient() {}
-
-  // Overridden from StubDevToolsClient:
-  virtual Status SendCommandAndGetResult(
-      const std::string& method,
-      const base::DictionaryValue& params,
-      scoped_ptr<base::DictionaryValue>* result) override {
-    method_ = method;
-    params_.Clear();
-    params_.MergeDictionary(&params);
-    return Status(kOk);
-  }
-
-  std::string method_;
-  base::DictionaryValue params_;
-};
-
-}  // namespace
 
 TEST(JavaScriptDialogManager, HandleDialogPassesParams) {
   RecorderDevToolsClient client;
@@ -57,9 +33,9 @@ TEST(JavaScriptDialogManager, HandleDialogPassesParams) {
   std::string given_text("text");
   ASSERT_EQ(kOk, manager.HandleDialog(false, &given_text).code());
   std::string text;
-  client.params_.GetString("promptText", &text);
+  ASSERT_TRUE(client.commands_[0].params.GetString("promptText", &text));
   ASSERT_EQ(given_text, text);
-  ASSERT_TRUE(client.params_.HasKey("accept"));
+  ASSERT_TRUE(client.commands_[0].params.HasKey("accept"));
 }
 
 TEST(JavaScriptDialogManager, HandleDialogNullPrompt) {
@@ -71,8 +47,8 @@ TEST(JavaScriptDialogManager, HandleDialogNullPrompt) {
       kOk,
       manager.OnEvent(&client, "Page.javascriptDialogOpening", params).code());
   ASSERT_EQ(kOk, manager.HandleDialog(false, NULL).code());
-  ASSERT_FALSE(client.params_.HasKey("promptText"));
-  ASSERT_TRUE(client.params_.HasKey("accept"));
+  ASSERT_FALSE(client.commands_[0].params.HasKey("promptText"));
+  ASSERT_TRUE(client.commands_[0].params.HasKey("accept"));
 }
 
 TEST(JavaScriptDialogManager, ReconnectClearsStateAndSendsEnable) {
@@ -88,7 +64,7 @@ TEST(JavaScriptDialogManager, ReconnectClearsStateAndSendsEnable) {
   ASSERT_EQ(kOk, manager.GetDialogMessage(&message).code());
 
   ASSERT_TRUE(manager.OnConnected(&client).IsOk());
-  ASSERT_EQ("Page.enable", client.method_);
+  ASSERT_EQ("Page.enable", client.commands_[0].method);
   ASSERT_FALSE(manager.IsDialogOpen());
   ASSERT_EQ(kNoAlertOpen, manager.GetDialogMessage(&message).code());
   ASSERT_EQ(kNoAlertOpen, manager.HandleDialog(false, NULL).code());
@@ -99,28 +75,28 @@ namespace {
 class FakeDevToolsClient : public StubDevToolsClient {
  public:
   FakeDevToolsClient() : listener_(NULL), closing_count_(0) {}
-  virtual ~FakeDevToolsClient() {}
+  ~FakeDevToolsClient() override {}
 
   void set_closing_count(int closing_count) {
     closing_count_ = closing_count;
   }
 
   // Overridden from StubDevToolsClient:
-  virtual Status SendCommandAndGetResult(
+  Status SendCommandAndGetResult(
       const std::string& method,
       const base::DictionaryValue& params,
       scoped_ptr<base::DictionaryValue>* result) override {
     while (closing_count_ > 0) {
       base::DictionaryValue empty;
       Status status =
-          listener_->OnEvent(this, "Page.javascriptDialogClosing", empty);
+          listener_->OnEvent(this, "Page.javascriptDialogClosed", empty);
       if (status.IsError())
         return status;
       closing_count_--;
     }
     return Status(kOk);
   }
-  virtual void AddListener(DevToolsEventListener* listener) override {
+  void AddListener(DevToolsEventListener* listener) override {
     listener_ = listener;
   }
 
@@ -202,7 +178,7 @@ TEST(JavaScriptDialogManager, OneDialogManualClose) {
 
   ASSERT_EQ(
       kOk,
-      manager.OnEvent(&client, "Page.javascriptDialogClosing", params).code());
+      manager.OnEvent(&client, "Page.javascriptDialogClosed", params).code());
   ASSERT_FALSE(manager.IsDialogOpen());
   ASSERT_EQ(kNoAlertOpen, manager.GetDialogMessage(&message).code());
   ASSERT_EQ(kNoAlertOpen, manager.HandleDialog(false, NULL).code());

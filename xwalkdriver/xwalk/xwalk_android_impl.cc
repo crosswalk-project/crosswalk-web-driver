@@ -4,27 +4,52 @@
 
 #include "xwalk/test/xwalkdriver/xwalk/xwalk_android_impl.h"
 
-#include "xwalk/test/xwalkdriver/net/port_server.h"
-#include "xwalk/test/xwalkdriver/xwalk/android_device.h"
-#include "xwalk/test/xwalkdriver/xwalk/device.h"
+#include "base/strings/string_number_conversions.h"
+#include "base/strings/string_split.h"
 #include "xwalk/test/xwalkdriver/xwalk/device_manager.h"
+#include "xwalk/test/xwalkdriver/xwalk/devtools_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/devtools_http_client.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
+#include "xwalk/test/xwalkdriver/net/port_server.h"
 
 XwalkAndroidImpl::XwalkAndroidImpl(
-    scoped_ptr<DevToolsHttpClient> client,
+    scoped_ptr<DevToolsHttpClient> http_client,
+    scoped_ptr<DevToolsClient> websocket_client,
     ScopedVector<DevToolsEventListener>& devtools_event_listeners,
     scoped_ptr<PortReservation> port_reservation,
     scoped_ptr<Device> device)
-    : XwalkImpl(client.Pass(),
+    : XwalkImpl(http_client.Pass(),
+                 websocket_client.Pass(),
                  devtools_event_listeners,
                  port_reservation.Pass()),
       device_(device.Pass()) {}
 
 XwalkAndroidImpl::~XwalkAndroidImpl() {}
 
+Status XwalkAndroidImpl::GetAsDesktop(XwalkDesktopImpl** desktop) {
+  return Status(kUnknownError, "operation is unsupported on Android");
+}
+
 std::string XwalkAndroidImpl::GetOperatingSystemName() {
   return "ANDROID";
+}
+
+bool XwalkAndroidImpl::HasTouchScreen() const {
+  const BrowserInfo* browser_info = GetBrowserInfo();
+  if (browser_info->browser_name == "webview") {
+    std::vector<std::string> version_parts;
+    base::SplitString(browser_info->browser_version, '.', &version_parts);
+    int major_version;
+    if (version_parts.size() != 4 ||
+        !base::StringToInt(version_parts[0], &major_version)) {
+      LOG(WARNING) << "Unrecognized webview version: "
+                   << browser_info->browser_version;
+      return false;
+    }
+    return major_version >= 44;
+  } else {
+    return browser_info->build_no >= 2388;
+  }
 }
 
 Status XwalkAndroidImpl::QuitImpl() {

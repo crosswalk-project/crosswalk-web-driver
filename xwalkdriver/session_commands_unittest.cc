@@ -14,12 +14,12 @@
 #include "base/run_loop.h"
 #include "base/threading/thread.h"
 #include "base/values.h"
-#include "testing/gtest/include/gtest/gtest.h"
 #include "xwalk/test/xwalkdriver/xwalk/status.h"
 #include "xwalk/test/xwalkdriver/xwalk/stub_xwalk.h"
 #include "xwalk/test/xwalkdriver/commands.h"
 #include "xwalk/test/xwalkdriver/session.h"
 #include "xwalk/test/xwalkdriver/session_commands.h"
+#include "testing/gtest/include/gtest/gtest.h"
 
 TEST(SessionCommandTest, FileUpload) {
   Session session("id");
@@ -27,7 +27,7 @@ TEST(SessionCommandTest, FileUpload) {
   scoped_ptr<base::Value> value;
   // Zip file entry that contains a single file with contents 'COW\n', base64
   // encoded following RFC 1521.
-  const char* kBase64ZipEntry =
+  const char kBase64ZipEntry[] =
       "UEsDBBQAAAAAAMROi0K/wAzGBAAAAAQAAAADAAAAbW9vQ09XClBLAQIUAxQAAAAAAMROi0K/"
       "wAzG\nBAAAAAQAAAADAAAAAAAAAAAAAACggQAAAABtb29QSwUGAAAAAAEAAQAxAAAAJQAAAA"
       "AA\n";
@@ -47,10 +47,10 @@ namespace {
 class DetachXwalk : public StubXwalk {
  public:
   DetachXwalk() : quit_called_(false) {}
-  virtual ~DetachXwalk() {}
+  ~DetachXwalk() override {}
 
   // Overridden from Xwalk:
-  virtual Status Quit() override {
+  Status Quit() override {
     quit_called_ = true;
     return Status(kOk);
   }
@@ -95,12 +95,10 @@ namespace {
 class FailsToQuitXwalk : public StubXwalk {
  public:
   FailsToQuitXwalk() {}
-  virtual ~FailsToQuitXwalk() {}
+  ~FailsToQuitXwalk() override {}
 
   // Overridden from Xwalk:
-  virtual Status Quit() override {
-    return Status(kUnknownError);
-  }
+  Status Quit() override { return Status(kUnknownError); }
 };
 
 }  // namespace
@@ -110,4 +108,48 @@ TEST(SessionCommandsTest, QuitFails) {
   base::DictionaryValue params;
   scoped_ptr<base::Value> value;
   ASSERT_EQ(kUnknownError, ExecuteQuit(false, &session, params, &value).code());
+}
+
+TEST(SessionCommandsTest, AutoReporting) {
+  DetachXwalk* xwalk = new DetachXwalk();
+  Session session("id", scoped_ptr<Xwalk>(xwalk));
+  base::DictionaryValue params;
+  scoped_ptr<base::Value> value;
+  StatusCode status_code;
+  bool enabled;
+
+  // autoreporting should be disabled by default
+  status_code = ExecuteIsAutoReporting(&session, params, &value).code();
+  ASSERT_EQ(kOk, status_code);
+  ASSERT_FALSE(session.auto_reporting_enabled);
+  ASSERT_TRUE(value.get()->GetAsBoolean(&enabled));
+  ASSERT_FALSE(enabled);
+
+  // an error should be given if the |enabled| parameter is not set
+  status_code = ExecuteSetAutoReporting(&session, params, &value).code();
+  ASSERT_EQ(kUnknownError, status_code);
+
+  // try to enable autoreporting
+  params.SetBoolean("enabled", true);
+  status_code = ExecuteSetAutoReporting(&session, params, &value).code();
+  ASSERT_EQ(kOk, status_code);
+  ASSERT_TRUE(session.auto_reporting_enabled);
+
+  // check that autoreporting was enabled successfully
+  status_code = ExecuteIsAutoReporting(&session, params, &value).code();
+  ASSERT_EQ(kOk, status_code);
+  ASSERT_TRUE(value.get()->GetAsBoolean(&enabled));
+  ASSERT_TRUE(enabled);
+
+  // try to disable autoreporting
+  params.SetBoolean("enabled", false);
+  status_code = ExecuteSetAutoReporting(&session, params, &value).code();
+  ASSERT_EQ(kOk, status_code);
+  ASSERT_FALSE(session.auto_reporting_enabled);
+
+  // check that autoreporting was disabled successfully
+  status_code = ExecuteIsAutoReporting(&session, params, &value).code();
+  ASSERT_EQ(kOk, status_code);
+  ASSERT_TRUE(value.get()->GetAsBoolean(&enabled));
+  ASSERT_FALSE(enabled);
 }

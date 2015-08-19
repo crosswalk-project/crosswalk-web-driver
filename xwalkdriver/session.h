@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_SESSION_H_
-#define XWALK_TEST_XWALKDRIVER_SESSION_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_SESSION_H_
+#define CHROME_TEST_CHROMEDRIVER_SESSION_H_
 
 #include <list>
 #include <string>
-#include <vector>
 
 #include "base/basictypes.h"
 #include "base/files/scoped_temp_dir.h"
@@ -15,7 +14,10 @@
 #include "base/memory/scoped_vector.h"
 #include "base/time/time.h"
 #include "xwalk/test/xwalkdriver/basic_types.h"
+#include "xwalk/test/xwalkdriver/xwalk/device_metrics.h"
 #include "xwalk/test/xwalkdriver/xwalk/geoposition.h"
+#include "xwalk/test/xwalkdriver/xwalk/network_conditions.h"
+#include "xwalk/test/xwalkdriver/command_listener.h"
 
 namespace base {
 class DictionaryValue;
@@ -46,10 +48,12 @@ struct Session {
   Status GetTargetWindow(WebView** web_view);
 
   void SwitchToTopFrame();
+  void SwitchToParentFrame();
   void SwitchToSubFrame(const std::string& frame_id,
                         const std::string& xwalkdriver_frame_id);
   std::string GetCurrentFrameId() const;
   std::vector<WebDriverLog*> GetAllLogs() const;
+  std::string GetFirstBrowserError() const;
 
   const std::string id;
   bool quit;
@@ -68,15 +72,23 @@ struct Session {
   base::TimeDelta script_timeout;
   scoped_ptr<std::string> prompt_text;
   scoped_ptr<Geoposition> overridden_geoposition;
+  scoped_ptr<DeviceMetrics> overridden_device_metrics;
+  scoped_ptr<NetworkConditions> overridden_network_conditions;
   // Logs that populate from DevTools events.
   ScopedVector<WebDriverLog> devtools_logs;
   scoped_ptr<WebDriverLog> driver_log;
   base::ScopedTempDir temp_dir;
   scoped_ptr<base::DictionaryValue> capabilities;
+  bool auto_reporting_enabled;
+  // |command_listeners| should be declared after |xwalk|. When the |Session|
+  // is destroyed, |command_listeners| should be freed first, since some
+  // |CommandListener|s might be |CommandListenerProxy|s that forward to
+  // |DevToolsEventListener|s owned by |xwalk|.
+  ScopedVector<CommandListener> command_listeners;
 };
 
 Session* GetThreadLocalSession();
 
 void SetThreadLocalSession(scoped_ptr<Session> session);
 
-#endif  // XWALK_TEST_XWALKDRIVER_SESSION_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_SESSION_H_

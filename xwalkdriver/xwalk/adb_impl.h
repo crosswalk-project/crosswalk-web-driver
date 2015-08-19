@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef XWALK_TEST_XWALKDRIVER_XWALK_ADB_IMPL_H_
-#define XWALK_TEST_XWALKDRIVER_XWALK_ADB_IMPL_H_
+#ifndef CHROME_TEST_CHROMEDRIVER_CHROME_ADB_IMPL_H_
+#define CHROME_TEST_CHROMEDRIVER_CHROME_ADB_IMPL_H_
 
 #include <string>
 #include <vector>
 
 #include "base/compiler_specific.h"
 #include "base/memory/ref_counted.h"
-#include "xwalk/test/xwalkdriver/xwalk/device_bridge.h"
+#include "xwalk/test/xwalkdriver/xwalk/adb.h"
 
 namespace base {
 class SingleThreadTaskRunner;
@@ -18,36 +18,37 @@ class SingleThreadTaskRunner;
 
 class Status;
 
-class AdbImpl : public DeviceBridge {
+class AdbImpl : public Adb {
  public:
   explicit AdbImpl(
-      const scoped_refptr<base::SingleThreadTaskRunner>& io_message_loop_proxy,
+      const scoped_refptr<base::SingleThreadTaskRunner>& io_task_runner,
       int port);
-  virtual ~AdbImpl();
+  ~AdbImpl() override;
 
-  // Overridden from DeviceBridge:
-  virtual Status GetDevices(std::vector<std::string>* devices) override;
-  virtual Status ForwardPort(const std::string& device_serial,
-                             int local_port,
-                             const std::string& remote_abstract) override;
-  virtual Status SetCommandLineFile(const std::string& device_serial,
-                                    const std::string& command_line_file,
-                                    const std::string& exec_name,
-                                    const std::string& args) override;
-  virtual Status CheckAppInstalled(const std::string& device_serial,
-                                   const std::string& package) override;
-  virtual Status ClearAppData(const std::string& device_serial,
-                              const std::string& package) override;
-  virtual Status SetDebugApp(const std::string& device_serial,
-                             const std::string& package) override;
-  virtual Status Launch(const std::string& device_serial,
-                        const std::string& app_id) override;
-  virtual Status ForceStop(const std::string& device_serial,
+  // Overridden from Adb:
+  Status GetDevices(std::vector<std::string>* devices) override;
+  Status ForwardPort(const std::string& device_serial,
+                     int local_port,
+                     const std::string& remote_abstract) override;
+  Status SetCommandLineFile(const std::string& device_serial,
+                            const std::string& command_line_file,
+                            const std::string& exec_name,
+                            const std::string& args) override;
+  Status CheckAppInstalled(const std::string& device_serial,
                            const std::string& package) override;
-  virtual Status GetPidByName(const std::string& device_serial,
-                              const std::string& process_name,
-                              int* pid) override;
-  virtual std::string GetOperatingSystemName() override;
+  Status ClearAppData(const std::string& device_serial,
+                      const std::string& package) override;
+  Status SetDebugApp(const std::string& device_serial,
+                     const std::string& package) override;
+  Status Launch(const std::string& device_serial,
+                const std::string& package,
+                const std::string& activity) override;
+  Status ForceStop(const std::string& device_serial,
+                   const std::string& package) override;
+  Status GetPidByName(const std::string& device_serial,
+                      const std::string& process_name,
+                      int* pid) override;
+  std::string GetOperatingSystemName();
  private:
   Status ExecuteCommand(const std::string& command,
                         std::string* response);
@@ -63,4 +64,4 @@ class AdbImpl : public DeviceBridge {
   int port_;
 };
 
-#endif  // XWALK_TEST_XWALKDRIVER_XWALK_ADB_IMPL_H_
+#endif  // CHROME_TEST_CHROMEDRIVER_CHROME_ADB_IMPL_H_
